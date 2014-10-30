@@ -5,6 +5,8 @@ class Test
 {
   public:
     void random_data_generation();
+
+    void determinant();
 };
 
 #endif

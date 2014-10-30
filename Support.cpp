@@ -622,7 +622,9 @@ void TestFunctions()
 {
   Test test;
 
-  test.random_data_generation();
+  test.determinant();
+
+  //test.random_data_generation();
 }
 
 void RunExperiments(int iterations)
@@ -844,6 +846,18 @@ Matrix computeDispersionMatrix(std::vector<Vector> &sample)
   return dispersion;
 }
 
+Matrix computeDispersionMatrix(std::vector<Vector> &sample, Vector &weights)
+{
+  int d = sample[0].size();
+  Matrix dispersion = ZeroMatrix(d,d);
+  Matrix tmp;
+  for (int i=0; i<sample.size(); i++) {
+    tmp = outer_prod(sample[i],sample[i]);
+    dispersion += (weights[i] * tmp);
+  }
+  return dispersion;
+}
+
 /*!
  *  Computes \sum x * x' / N (x is a vector)
  */
@@ -917,7 +931,7 @@ Matrix generateRandomCovarianceMatrix(int D)
   Matrix A = ZeroMatrix(D,D);
   for (int i=0; i<D; i++) {
     for (int j=0; j<D; j++) {
-      A(i,i) = uniform_random();
+      A(i,j) = uniform_random();
     }
   }
   Matrix At = trans(A);
@@ -948,6 +962,51 @@ std::vector<Vector> transform(std::vector<Vector> &x, Matrix &T)
     y[i] = prod(T,x[i]);
   }
   return y;
+}
+
+// computes the determinant as well
+int determinant_sign(const permutation_matrix<std::size_t> &pm)
+{
+  int pm_sign = 1;
+  std::size_t size = pm.size();
+  for (std::size_t i=0; i<size; i++) {
+    if (i != pm(i)) {
+      pm_sign *= -1;
+    }
+  }
+  return pm_sign;
+}
+
+bool invertMatrix(const Matrix &input, Matrix &inverse, long double &det)
+{
+  typedef permutation_matrix<std::size_t> pmatrix;
+
+  // create a working copy of the input
+  Matrix A(input);
+
+  // create a permutation matrix for the LU-factorization
+  pmatrix pm(A.size1());
+
+  // perform LU-factorization
+  int res = lu_factorize(A, pm);
+  if (res != 0) {
+    det = 0;
+    return false;
+  }
+
+  det = 1;
+  for (int i=0; i<A.size1(); i++) {
+    det *= A(i,i);
+  }
+  det *= determinant_sign(pm);
+
+  // create identity matrix of "inverse"
+  inverse.assign(IdentityMatrix (A.size1()));
+
+  // backsubstitute to get the inverse
+  lu_substitute(A, pm, inverse);
+
+  return true;
 }
 
 /*!

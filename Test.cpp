@@ -34,3 +34,27 @@ void Test::random_data_generation()
   writeToFile("./visualize/mvnorm3d.dat",random_sample,3);
 }
 
+void Test::determinant()
+{
+  int D;
+  Matrix A,inv;
+  long double det;
+
+  D = 5;
+  A = generateRandomCovarianceMatrix(D);
+  inv = Matrix(D,D);
+  invertMatrix(A,inv,det);
+  
+  cout << "A: " << A << endl;
+  cout << "inv(A): " << inv << endl;
+  cout << "det(A): " << det << endl;
+
+  A = IdentityMatrix(D);
+  inv = Matrix(D,D);
+  invertMatrix(A,inv,det);
+  
+  cout << "A: " << A << endl;
+  cout << "inv(A): " << inv << endl;
+  cout << "det(A): " << det << endl;
+}
+

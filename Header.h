@@ -60,6 +60,7 @@ typedef boost::numeric::ublas::zero_matrix<long double> ZeroMatrix;
 
 #define ML 0
 #define MML 1
+#define ALL 2
 
 #define DEFAULT_RESOLUTION 1
 #define MAX_COMPONENTS 100
