@@ -21,7 +21,7 @@ int main(int argc, char **argv)
     RunExperiments(parameters.iterations);
   }
 
-  if (parameters.read_profiles == SET && parameters.simulation == UNSET
+  /*if (parameters.read_profiles == SET && parameters.simulation == UNSET
       && parameters.compute_responsibility_matrix == UNSET) {
     computeEstimators(parameters);
   } 
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 
   if (parameters.simulation == SET) {
     simulateMixtureModel(parameters);
-  }
+  }*/
 
   delete(uniform_generator);
 

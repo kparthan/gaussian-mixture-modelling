@@ -58,3 +58,25 @@ std::vector<Vector> MultivariateNormal::generate(int N)
   return random_sample;
 }
 
+void MultivariateNormal::estimateParameters(std::vector<Vector> &data, Vector &weights)
+{
+  struct Estimates estimates;
+
+  estimateMean(estimates,data,weights);
+
+  estimateCovariance(estimates);
+
+  updateParameters(estimates);
+}
+
+void MultivariateNormal::estimateMean(struct Estimates &estimates,std::vector<Vector> &data, Vector &weights)
+{
+  Vector resultant = computeVectorSum(data,weights,estimates.Neff);
+  estimates.mean = Vector(resultant.size(),0);
+  for (int i=0; i<resultant.size(); i++) {
+    estimates.mean[i] = resultant[i] / Neff;
+  }
+}
+
+void MultivariateNormal::estimateCovariance(struct Estimates &estimates, )
+

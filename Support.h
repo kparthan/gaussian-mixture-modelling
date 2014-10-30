@@ -2,8 +2,8 @@
 #define SUPPORT_H
 
 #include "Header.h"
-#include "Mixture.h"
-#include "vMF.h"
+//#include "Mixture.h"
+#include "MultivariateNormal.h"
 
 struct Parameters
 {
@@ -38,18 +38,9 @@ struct Parameters
 
 //! parameters associated with estimation
 struct Estimates {
+  long double Neff;
   Vector mean;
-  long double R,Rbar,Neff;
-  long double kappa_ml_approx,kappa_ml;
-  long double kappa_tanabe,kappa_truncated_newton,kappa_song;
-  long double kappa_mml_newton,kappa_mml_halley,kappa_mml_complete;
-};
-
-struct TestingConstants {
-  long double a1,a2,b0,b1,b2,d1,d2;
-  long double A2,B1,D1,D2;
-  long double f11,f12;
-  long double g11,g12,g21,g31;
+  Matrix cov_ml,cov_mml;
 };
 
 // general functions
@@ -86,22 +77,8 @@ void setEstimationMethod(int);
 void TestFunctions();
 void RunExperiments(int);
 
-// bessel functions
-long double computeLogModifiedBesselFirstKind_old(long double, long double);
-long double computeLogModifiedBesselFirstKind(long double, long double);
-long double computeRatioBessel(int, long double);
-long double computeDerivativeOfRatioBessel(int, long double, long double);
-long double computeSecondDerivativeOfRatioBessel(int, long double, long double);
-long double computeThirdDerivativeOfRatioBessel(int, long double, long double, long double, long double);
-long double computeDerivativeOf_Ader_A(int &, long double &, long double &, long double &); 
-long double computeSecondDerivativeOf_Ader_A(int &, long double &, long double &, long double &, long double &);
-long double computeDerivativeOf_A2der_Ader(int &, long double &, long double &, long double &, long double &); 
-long double computeSecondDerivativeOf_A2der_Ader(int &, long double &, long double &, long double &, long double &, long double &);
-struct TestingConstants computeTestingConstants(int, long double);
-
 // geometry functions
 std::vector<Vector> load_matrix(string &, int);
-long double computeLogSurfaceAreaSphere(int);
 long double normalize(Vector &, Vector &);
 long double norm(Vector &);
 void cartesian2spherical(Vector &, Vector &);
@@ -114,40 +91,33 @@ Vector computeNormalizedVectorSum(std::vector<Vector> &);
 Matrix computeDispersionMatrix(std::vector<Vector> &);
 Matrix computeNormalizedDispersionMatrix(std::vector<Vector> &);
 long double computeConstantTerm(int);
-Matrix computeOrthogonalTransformation(Vector &);
 Matrix computeOrthogonalTransformation(Vector &, Vector &);
+Matrix generateRandomCovarianceMatrix(int);
+Matrix generateRandomCovarianceMatrix(int, long double);
 std::vector<Vector> transform(std::vector<Vector> &, Matrix &);
 bool invertMatrix(const Matrix &, Matrix &);
 void eigenDecomposition(Matrix, Vector &, Matrix &);
 void jacobiRotateMatrix(Matrix &, Matrix &, int, int);
 Vector generateRandomUnitVector(int);
-void generateRandomOrthogonalVectors(Vector &, Vector &, Vector &);  // 3D only
-Matrix generateRandomBinghamMatrix(int);
-Matrix generateRandomBinghamMatrix(Vector &, long double);
-Vector generateRandomChisquare(int, int);
-long double computeTestStatistic(Matrix &, struct TestingConstants &, int);
-long double compute_pvalue(long double, chi_squared &);
-long double compute_vc(long double);
-long double compute_vs(long double);
 
 // mixture functions
-Vector generateFromSimplex(int);
-std::vector<vMF> generateRandomComponents(int, int);
-std::vector<Vector> generateRandomUnitMeans(int, int);
-Vector generateRandomKappas(int);
-std::vector<std::vector<int> > updateBins(std::vector<Vector> &, long double);
-void outputBins(std::vector<std::vector<int> > &, long double);
-void computeEstimators(struct Parameters &);
-void computeResponsibilityGivenMixture(struct Parameters &);
-bool gatherData(struct Parameters &, std::vector<Vector> &);
-void modelOneComponent(struct Parameters &, std::vector<Vector> &);
-void modelMixture(struct Parameters &, std::vector<Vector> &);
-void simulateMixtureModel(struct Parameters &);
-pair<std::vector<Mixture>,std::vector<Mixture> > 
-estimateMixturesUsingAllMethods(int, std::vector<Vector> &, ostream &);
-Mixture inferComponents(Mixture &, int, ostream &);
-void updateInference(Mixture &, Mixture &, ostream &, int);
-void inferStableMixtures(std::vector<Vector> &, int, int, string &);
+//Vector generateFromSimplex(int);
+//std::vector<MultivariateNormal> generateRandomComponents(int, int);
+//std::vector<Vector> generateRandomUnitMeans(int, int);
+//Vector generateRandomKappas(int);
+//std::vector<std::vector<int> > updateBins(std::vector<Vector> &, long double);
+//void outputBins(std::vector<std::vector<int> > &, long double);
+//void computeEstimators(struct Parameters &);
+//void computeResponsibilityGivenMixture(struct Parameters &);
+//bool gatherData(struct Parameters &, std::vector<Vector> &);
+//void modelOneComponent(struct Parameters &, std::vector<Vector> &);
+//void modelMixture(struct Parameters &, std::vector<Vector> &);
+//void simulateMixtureModel(struct Parameters &);
+//pair<std::vector<Mixture>,std::vector<Mixture> > 
+//estimateMixturesUsingAllMethods(int, std::vector<Vector> &, ostream &);
+//Mixture inferComponents(Mixture &, int, ostream &);
+//void updateInference(Mixture &, Mixture &, ostream &, int);
+//void inferStableMixtures(std::vector<Vector> &, int, int, string &);
 
 #endif
 

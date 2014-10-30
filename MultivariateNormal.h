@@ -22,6 +22,8 @@ class MultivariateNormal
     void printParameters();
 
     std::vector<Vector> generate(int);
+
+    void estimateParameters(std::vector<Vector> &, Vector &);
 };
 
 #endif

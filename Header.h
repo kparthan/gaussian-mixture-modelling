@@ -21,7 +21,6 @@
 #include <boost/tokenizer.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/random.hpp>
-#include <boost/multiprecision/mpfr.hpp>
 
 #include <boost/math/constants/constants.hpp>
 #include <boost/math/special_functions.hpp>
@@ -42,14 +41,11 @@ using namespace boost::program_options;
 using namespace boost::filesystem;
 using namespace boost::math;
 using namespace boost::numeric::ublas;
-using namespace boost::multiprecision;
-using namespace boost::math::tools;
 
 typedef std::vector<long double> Vector;
 typedef boost::numeric::ublas::matrix<long double> Matrix;
 typedef boost::numeric::ublas::identity_matrix<long double> IdentityMatrix;
 typedef boost::numeric::ublas::zero_matrix<long double> ZeroMatrix;
-typedef number<mpfr_float_backend<1000> >  my_float; 
 
 // numeric constants
 #define AOM 0.001
@@ -62,24 +58,14 @@ typedef number<mpfr_float_backend<1000> >  my_float;
 #define SET 1 
 #define UNSET 0
 
-#define ML_APPROX 0 
-#define TANABE 1
-#define TRUNCATED_NEWTON 2
-#define SONG 3
-#define MML_NEWTON 4
-#define MML_HALLEY 5
-#define NUM_METHODS 6
-
-#define ML 6 
-#define MML_COMPLETE 7
+#define ML 0
+#define MML 1
 
 #define DEFAULT_RESOLUTION 1
 #define MAX_COMPONENTS 100
 #define DEFAULT_FIT_COMPONENTS 2
 #define DEFAULT_SIMULATE_COMPONENTS 2
 #define DEFAULT_SAMPLE_SIZE 2000
-#define DEFAULT_MAX_KAPPA 10000 
-#define MIN_KAPPA 0.001
 
 #define SPLIT 0
 #define KILL 1
