@@ -3,6 +3,7 @@
 
 #include "Header.h"
 
+// pdf = cd * exp( ... )
 class MultivariateNormal
 {
   private:
@@ -42,6 +43,10 @@ class MultivariateNormal
     Vector Mean();
 
     Matrix Covariance();
+
+    Matrix CovarianceInverse();
+
+    long double getLogNormalizationConstant();
 
     long double computeNegativeLogLikelihood(Vector &);
 

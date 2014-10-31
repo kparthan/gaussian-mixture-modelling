@@ -90,7 +90,6 @@ void MultivariateNormal::computeAllEstimators(
   estimateMean(estimates,data,weights);
 
   ESTIMATION = BOTH;
-  struct Estimates estimates;
   estimateMean(estimates,data,weights);
   estimateCovariance(estimates,data,weights);
 
@@ -160,7 +159,7 @@ void MultivariateNormal::estimateCovariance(
       estimates.cov_mml = S / (estimates.Neff - 1);
       break;
 
-    case ALL:
+    case BOTH:
       estimates.cov_ml = S / estimates.Neff;
       estimates.cov_mml = S / (estimates.Neff - 1);
       break;
@@ -192,21 +191,41 @@ Matrix MultivariateNormal::Covariance()
   return cov;
 }
 
+Matrix MultivariateNormal::CovarianceInverse()
+{
+  return cov_inv;
+}
+
+long double MultivariateNormal::getLogNormalizationConstant()
+{
+  return log_cd;
+}
+
 long double MultivariateNormal::computeNegativeLogLikelihood(Vector &x)
 {
-  long double expnt = computeDotProduct(kmu,x);
-  long double log_pdf = log_cd + expnt;
+  long double log_pdf = log_cd;
+  Vector diff(D,0);
+  for (int i=0; i<D; i++) {
+    diff[i] = x[i] - mu[i];
+  }
+  log_pdf -= (0.5 * prod_vMv(diff,cov_inv));
   return -log_pdf;
 }
 
 long double MultivariateNormal::computeNegativeLogLikelihood(std::vector<Vector> &sample)
 {
-  long double value = 0;
   int N = sample.size();
-  value -= N * log_cd;
-  Vector sum = computeVectorSum(sample);
-  value -= computeDotProduct(kmu,sum);
-  return value;
+  long double value = N * log_cd;
+  Vector diff(D,0);
+  long double tmp = 0;
+  for (int i=0; i<N; i++) {
+    for (int j=0; j<D; j++) {
+      diff[j] = sample[i][j] - mu[j];
+    }
+    tmp += prod_vMv(diff,cov_inv);
+  }
+  value -= 0.5 * tmp;
+  return -value;
 }
 
 long double MultivariateNormal::computeMessageLength(std::vector<Vector> &data)
@@ -214,14 +233,14 @@ long double MultivariateNormal::computeMessageLength(std::vector<Vector> &data)
   // msg length to encode parameters
   // (this includes Fisher term as well)
   long double It = computeLogParametersProbability(data.size());
-  if (It == INFINITY) {
-    cout << "It: INFINITY\n";
-    exit(1);
-  }
+
   // msg length to encode data given parameters 
   long double Il = computeNegativeLogLikelihood(data);
-  Il -= (D-1) * data.size() * log(AOM);
-  long double constant = computeConstantTerm(D);
+  Il -= (D * data.size() * log(AOM));
+
+  int num_params = 0.5 * D * (D+3);
+  long double constant = computeConstantTerm(num_params);
+
   return (It + Il + constant) / log(2);
 }
 
@@ -235,49 +254,39 @@ long double MultivariateNormal::computeLogParametersProbability(long double Neff
 
 long double MultivariateNormal::computeLogPriorDensity()
 {
-  long double log_ad = log(PI/2.0);
-  long double d = D - 2;
-  while (d > 0) {
-    log_ad += log(d);
-    d -= 2;
-  }
-  d = D - 1;
-  while (d > 0) {
-    log_ad -= log(d);
-    d -= 2;
-  }
-
-  long double log_prior = 0;
-  log_prior += log_ad;
-  log_prior += boost::math::lgamma<long double>(D/2.0 + 1);
-  log_prior -= log(D);
-  log_prior -= D * log(PI) / 2;
-  log_prior += (D-1) * log(kappa);
-  log_prior -= (D+1) * log(1+kappa*kappa) / 2;
-  return log_prior;
+  long double log_prior = log(2);
+  log_prior += (D * log(R1));
+  log_prior += log(R2);
+  log_prior += log(det_cov);
+  return -log_prior;
 }
 
 long double MultivariateNormal::computeLogFisherInformation(long double Neff)
 {
   long double log_fisher = 0;
-  log_fisher += D * log(Neff);
-  log_fisher += (D-1) * log(kappa);
-  long double A = computeRatioBessel(D,kappa);
-  log_fisher += (D-1) * log(A);
-  long double A_der = computeDerivativeOfRatioBessel(D,kappa,A);
-  /*if (A_der < 0 && fabs(A_der) <= TOLERANCE) {
-    cout << "error in log-fisher ...\n";
-    cout << "Neff: " << Neff << "; A: " << A << "; A_der: " << A_der << endl;
-    A_der = fabs(A_der);
-    //exit(1);
-    //return INFINITY;
-  }*/
-  log_fisher += log(A_der);
-  assert(log_fisher < INFINITY);
+  log_fisher += (2 * D * log(Neff));
+  log_fisher -= (D * log(2));
+  log_fisher -= (3 * log(det_cov));
   return log_fisher;
 }
 
 long double MultivariateNormal::computeKLDivergence(MultivariateNormal &other)
 {
+  long double log_cd2 = other.getLogNormalizationConstant();
+  long double kldiv = log_cd - log_cd2;
+
+  long double tmp = 0;
+  Vector mu2 = other.Mean();
+  Matrix cov2_inv = other.CovarianceInverse();
+  Vector diff_mu(D,0);
+  Matrix x = prod(cov2_inv,cov);
+  for (int i=0; i<D; i++) { // trace(c2inv * c1)
+    tmp += x(i,i);
+    diff_mu[i] = mu2[i] - mu[i];
+  }
+  tmp += prod_vMv(diff_mu,cov2_inv);
+  tmp -= D;
+  kldiv += (0.5 * tmp);
+  return kldiv / log(2);
 }
 

@@ -58,9 +58,12 @@ typedef boost::numeric::ublas::zero_matrix<long double> ZeroMatrix;
 #define SET 1 
 #define UNSET 0
 
+#define R1 10
+#define R2 10
+
 #define ML 0
 #define MML 1
-#define ALL 2
+#define BOTH 2
 
 #define DEFAULT_RESOLUTION 1
 #define MAX_COMPONENTS 100
