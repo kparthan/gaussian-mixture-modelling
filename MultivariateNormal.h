@@ -48,6 +48,8 @@ class MultivariateNormal
 
     long double getLogNormalizationConstant();
 
+    long double log_density(Vector &);
+
     long double computeNegativeLogLikelihood(Vector &);
 
     long double computeNegativeLogLikelihood(std::vector<Vector> &);

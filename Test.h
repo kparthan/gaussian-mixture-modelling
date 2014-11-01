@@ -7,6 +7,8 @@ class Test
     void random_data_generation();
 
     void determinant();
+
+    void all_estimates();
 };
 
 #endif

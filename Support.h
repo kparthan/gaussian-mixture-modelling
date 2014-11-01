@@ -104,10 +104,9 @@ void jacobiRotateMatrix(Matrix &, Matrix &, int, int);
 Vector generateRandomUnitVector(int);
 
 // mixture functions
-//Vector generateFromSimplex(int);
-//std::vector<MultivariateNormal> generateRandomComponents(int, int);
-//std::vector<Vector> generateRandomUnitMeans(int, int);
-//Vector generateRandomKappas(int);
+Vector generateFromSimplex(int);
+std::vector<MultivariateNormal> generateRandomComponents(int, int);
+std::vector<Vector> generateRandomGaussianMeans(int, int);
 //std::vector<std::vector<int> > updateBins(std::vector<Vector> &, long double);
 //void outputBins(std::vector<std::vector<int> > &, long double);
 //void computeEstimators(struct Parameters &);

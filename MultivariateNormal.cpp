@@ -28,8 +28,8 @@ void MultivariateNormal::updateConstants()
 
 long double MultivariateNormal::computeLogNormalizationConstant()
 {
-  long log_c = 0.5 * D * log(2*PI);
-  log_c += 0.5 * det_cov;
+  long double log_c = 0.5 * D * log(2*PI);
+  log_c += 0.5 * log(det_cov);
   return -log_c;
 }
 
@@ -87,7 +87,6 @@ void MultivariateNormal::computeAllEstimators(
   long double msglen,kldiv;
 
   Vector weights(data.size(),1.0);
-  estimateMean(estimates,data,weights);
 
   ESTIMATION = BOTH;
   estimateMean(estimates,data,weights);
@@ -156,12 +155,12 @@ void MultivariateNormal::estimateCovariance(
       break;
 
     case MML:
-      estimates.cov_mml = S / (estimates.Neff - 1);
+      estimates.cov_mml = S / (estimates.Neff + D - 2);
       break;
 
     case BOTH:
       estimates.cov_ml = S / estimates.Neff;
-      estimates.cov_mml = S / (estimates.Neff - 1);
+      estimates.cov_mml = S / (estimates.Neff + D - 2);
       break;
   }
 }
@@ -199,6 +198,17 @@ Matrix MultivariateNormal::CovarianceInverse()
 long double MultivariateNormal::getLogNormalizationConstant()
 {
   return log_cd;
+}
+
+long double MultivariateNormal::log_density(Vector &x)
+{
+  long double log_pdf = log_cd;
+  Vector diff(D,0);
+  for (int i=0; i<D; i++) {
+    diff[i] = x[i] - mu[i];
+  }
+  log_pdf -= (0.5 * prod_vMv(diff,cov_inv));
+  return log_pdf;
 }
 
 long double MultivariateNormal::computeNegativeLogLikelihood(Vector &x)
@@ -254,10 +264,8 @@ long double MultivariateNormal::computeLogParametersProbability(long double Neff
 
 long double MultivariateNormal::computeLogPriorDensity()
 {
-  long double log_prior = log(2);
-  log_prior += (D * log(R1));
-  log_prior += log(R2);
-  log_prior += log(det_cov);
+  long double log_prior = D * log(R1);
+  log_prior += (0.5 * (D+1) * log(det_cov));
   return -log_prior;
 }
 

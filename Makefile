@@ -14,6 +14,7 @@ OBJECTS = main.o \
   Structure.o \
   Normal.o \
   MultivariateNormal.o \
+  Mixture.o \
   Test.o \
   Experiments.o
 
@@ -37,8 +38,8 @@ Normal.o: Normal.cpp Normal.h Header.h
 MultivariateNormal.o: MultivariateNormal.cpp MultivariateNormal.h Header.h
 	g++ $(CFLAGS) $< -o $@
 
-#Mixture.o: Mixture.cpp Mixture.h Header.h 
-#	g++ $(CFLAGS) $< -o $@
+Mixture.o: Mixture.cpp Mixture.h Header.h 
+	g++ $(CFLAGS) $< -o $@
 
 Test.o: Test.cpp Test.h Header.h MultivariateNormal.h
 	g++ $(CFLAGS) $< -o $@

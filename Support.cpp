@@ -622,9 +622,11 @@ void TestFunctions()
 {
   Test test;
 
-  test.determinant();
+  //test.determinant();
 
   //test.random_data_generation();
+
+  test.all_estimates();
 }
 
 void RunExperiments(int iterations)
@@ -635,13 +637,13 @@ void RunExperiments(int iterations)
 
 ////////////////////// GEOMETRY FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-// load unit vectors only ...
+// not unit vectors ...
 std::vector<Vector> load_matrix(string &file_name, int D)
 {
   std::vector<Vector> sample;
   ifstream file(file_name.c_str());
   string line;
-  Vector numbers(D,0),unit_vector(D,0);
+  Vector numbers(D,0);
   int i;
   while (getline(file,line)) {
     boost::char_separator<char> sep(" \t");
@@ -653,8 +655,7 @@ std::vector<Vector> load_matrix(string &file_name, int D)
       iss >> x;
       numbers[i++] = x;
     }
-    normalize(numbers,unit_vector);
-    sample.push_back(unit_vector);
+    sample.push_back(numbers);
   }
   file.close();
   return sample;
@@ -931,7 +932,7 @@ Matrix generateRandomCovarianceMatrix(int D)
   Matrix A = ZeroMatrix(D,D);
   for (int i=0; i<D; i++) {
     for (int j=0; j<D; j++) {
-      A(i,j) = uniform_random();
+      A(i,j) = uniform_random() * R2;
     }
   }
   Matrix At = trans(A);
@@ -942,9 +943,9 @@ Matrix generateRandomCovarianceMatrix(int D)
 Matrix generateRandomCovarianceMatrix(int D, long double sigma)
 {
   Matrix cov = IdentityMatrix(D,D);
-  long double inv_sigmasq = 1 / (sigma * sigma);
+  long double sigmasq = sigma * sigma;
   for (int i=0; i<D; i++) {
-    cov(i,i) = inv_sigmasq;
+    cov(i,i) = sigmasq;
   }
   return cov;
 }
@@ -1157,91 +1158,72 @@ Vector generateRandomUnitVector(int D)
 
 ////////////////////// MIXTURE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-///*!
-// *  \brief This function is used to generate random weights such that
-// *  0 < w_i < 1 and \sum_i w_i = 1
-// *  \param D an integer
-// *  \return the list of weights
-// */
-//Vector generateFromSimplex(int D)
-//{
-//  Vector values(D,0);
-//  long double random,sum = 0;
-//  for (int i=0; i<D; i++) {
-//    // generate a random value in (0,1)
-//    random = uniform_random(); 
-//    assert(random > 0 && random < 1);
-//    // sampling from an exponential distribution with \lambda = 1
-//    values[i] = -log(1-random);
-//    sum += values[i];
-//  }
-//  for (int i=0; i<D; i++) {
-//    values[i] /= sum;
-//  }
-//  return values;
-//}
-//
-///*!
-// *  \brief This function is used to generate random components.
-// *  \param num_components an integer
-// *  \param D an integer
-// *  \return the list of components
-// */
-//std::vector<vMF> generateRandomComponents(int num_components, int D)
-//{
-//  // generate random unit means
-//  std::vector<Vector> unit_means = generateRandomUnitMeans(num_components,D);
-//
-//  // generate random kappas
-//  Vector kappas = generateRandomKappas(num_components);
-//
-//  std::vector<vMF> components;
-//  Vector mean;
-//  long double kappa;
-//  for (int i=0; i<num_components; i++) {
-//    // initialize component parameters
-//    mean = unit_means[i];
-//    kappa = kappas[i];
-//    vMF vmf(mean,kappa);
-//    components.push_back(vmf);
-//  }
-//  return components;
-//}
-//
-///*!
-// *  \brief This function generates random unit means
-// *  \param num_components an integer
-// *  \param D an integer
-// *  \return the list of random unit means 
-// */
-//std::vector<Vector> generateRandomUnitMeans(int num_components, int D)
-//{
-//  std::vector<Vector> random_unit_means;
-//  Normal normal(0,1);
-//  Vector mean(D,0),unit_mean(D,0);
-//  for (int i=0; i<num_components; i++) {
-//    mean = normal.generate(D);
-//    normalize(mean,unit_mean);
-//    random_unit_means.push_back(unit_mean);
-//  }
-//  return random_unit_means;
-//}
-//
-///*!
-// *  \brief This function generates random kappas 
-// *  \param num_components an integer
-// *  \return the list of random kappas 
-// */
-//Vector generateRandomKappas(int num_components)
-//{
-//  Vector random_kappas;
-//  for (int i=0; i<num_components; i++) {
-//    long double kappa = uniform_random() * MAX_KAPPA;
-//    random_kappas.push_back(kappa);
-//  }
-//  return random_kappas;
-//}
-//
+/*!
+ *  \brief This function is used to generate random weights such that
+ *  0 < w_i < 1 and \sum_i w_i = 1
+ *  \param D an integer
+ *  \return the list of weights
+ */
+Vector generateFromSimplex(int D)
+{
+  Vector values(D,0);
+  long double random,sum = 0;
+  for (int i=0; i<D; i++) {
+    // generate a random value in (0,1)
+    random = uniform_random(); 
+    assert(random > 0 && random < 1);
+    // sampling from an exponential distribution with \lambda = 1
+    values[i] = -log(1-random);
+    sum += values[i];
+  }
+  for (int i=0; i<D; i++) {
+    values[i] /= sum;
+  }
+  return values;
+}
+
+/*!
+ *  \brief This function is used to generate random components.
+ *  \param num_components an integer
+ *  \param D an integer
+ *  \return the list of components
+ */
+std::vector<MultivariateNormal> generateRandomComponents(int num_components, int D)
+{
+  // generate random means
+  std::vector<Vector> means = generateRandomGaussianMeans(num_components,D);
+
+  std::vector<MultivariateNormal> components;
+  Matrix A,cov;
+  for (int i=0; i<num_components; i++) {
+    cov = generateRandomCovarianceMatrix(D);
+    MultivariateNormal mvnorm(means[i],cov);
+    components.push_back(mvnorm);
+  }
+  return components;
+}
+
+/*!
+ *  \brief This function generates random unit means
+ *  \param num_components an integer
+ *  \param D an integer
+ *  \return the list of random unit means 
+ */
+std::vector<Vector> generateRandomGaussianMeans(int num_components, int D)
+{
+  std::vector<Vector> random_means;
+  Vector mean(D,0);
+  long double random;
+  for (int i=0; i<num_components; i++) {
+    for (int j=0; j<D; j++) {
+      random = uniform_random() * R1;
+      mean[j] = random - 0.5 * R1;
+    }
+    random_means.push_back(mean);
+  }
+  return random_means;
+}
+
 ///*!
 // *  \brief This function bins the sample data 
 // *  \param res a long double
