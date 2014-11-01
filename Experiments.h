@@ -11,6 +11,7 @@ class Experiments
   public:
     Experiments(int);
 
+    void simulate(int);
 };
 
 #endif

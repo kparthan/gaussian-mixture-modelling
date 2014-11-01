@@ -1,4 +1,4 @@
-function [] = plot_mvnrm2d(data_file)
+function [] = plot_mvnorm2d(data_file)
 
 % plot the sampled data
 M = load(data_file);

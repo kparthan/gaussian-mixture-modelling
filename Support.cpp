@@ -633,6 +633,8 @@ void RunExperiments(int iterations)
 {
   Experiments experiments(iterations);
 
+  //experiments.simulate(3);
+  experiments.simulate(5);
 }
 
 ////////////////////// GEOMETRY FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\

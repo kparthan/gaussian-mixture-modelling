@@ -1,4 +1,4 @@
-function [] = plot_mvnrm3d(data_file)
+function [] = plot_mvnorm3d(data_file)
 
 % plot the sampled data
 M = load(data_file);

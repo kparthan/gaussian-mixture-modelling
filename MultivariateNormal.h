@@ -28,6 +28,8 @@ class MultivariateNormal
 
     void printParameters();
 
+    void printParameters(ostream &);
+
     std::vector<Vector> generate(int);
 
     void computeAllEstimators(std::vector<Vector> &, struct Estimates &, int verbose = 0);

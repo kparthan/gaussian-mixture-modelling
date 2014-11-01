@@ -89,6 +89,8 @@ class Mixture
     //! Update the component weights
     void updateWeights();
 
+    void updateWeights_ML();
+
     //! Update components
     void updateComponents();
 
@@ -135,10 +137,10 @@ class Mixture
     void printParameters(ostream &);
 
     //! Loads the mixture file
-    void load(string &);
+    void load(string &, int);
 
     //! Loads the mixture file with the corresponding data
-    void load(string &, std::vector<Vector> &, Vector &);
+    void load(string &, int, std::vector<Vector> &, Vector &);
 
     //! Randomly choose a component
     int randomComponent();

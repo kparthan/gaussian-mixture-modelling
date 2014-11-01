@@ -7,6 +7,7 @@ extern int INFER_COMPONENTS;
 extern int ENABLE_DATA_PARALLELISM;
 extern int NUM_THREADS;
 extern long double IMPROVEMENT_RATE;
+extern int ESTIMATION;
 
 /*!
  *  \brief Null constructor module
@@ -183,7 +184,11 @@ void Mixture::initialize()
   sample_size = Vector(K,0);
   updateEffectiveSampleSize();
   weights = Vector(K,0);
-  updateWeights();
+  if (ESTIMATION == MML) {
+    updateWeights();
+  } else {
+    updateWeights_ML();
+  }
 
   // initialize parameters of each component
   components = std::vector<MultivariateNormal>(K);
@@ -213,6 +218,14 @@ void Mixture::updateWeights()
   long double normalization_constant = N + (K/2.0);
   for (int i=0; i<K; i++) {
     weights[i] = (sample_size[i] + 0.5) / normalization_constant;
+  }
+}
+
+void Mixture::updateWeights_ML()
+{
+  long double normalization_constant = N;
+  for (int i=0; i<K; i++) {
+    weights[i] = sample_size[i] / normalization_constant;
   }
 }
 
@@ -362,6 +375,7 @@ long double Mixture::computeMinimumMessageLength()
   assert(Iw >= 0);
 
   // encode the likelihood of the sample
+  int D = data[0].size();
   long double Il = negativeLogLikelihood(data);
   Il -= D * N * log(AOM);
   cout << "Il: " << Il << endl;
@@ -370,7 +384,7 @@ long double Mixture::computeMinimumMessageLength()
   // encode the parameters of the components
   long double It = 0,logp;
   for (int i=0; i<K; i++) {
-    logp = components[i].computeLogPriorProbability();
+    logp = components[i].computeLogParametersProbability(sample_size[i]);
     It += logp;
   }
   cout << "It: " << It << endl;
@@ -443,35 +457,65 @@ void Mixture::EM()
   printParameters(log,0,0);
 
   /* EM loop */
-  while (1) {
-    // Expectation (E-step)
-    updateResponsibilityMatrix();
-    updateEffectiveSampleSize();
-    // Maximization (M-step)
-    updateWeights();
-    updateComponents();
-    current = computeMinimumMessageLength();
-    if (fabs(current) >= INFINITY) break;
-    msglens.push_back(current);
-    printParameters(log,iter,current);
-    if (iter != 1) {
-      assert(current > 0);
-      // because EM has to consistently produce lower 
-      // message lengths otherwise something wrong!
-      // IMPORTANT: the below condition should not be 
-      //          fabs(prev - current) <= 0.0001 * fabs(prev)
-      // ... it's very hard to satisfy this condition and EM() goes into
-      // ... an infinite loop!
-      if (iter > 10 && (prev - current) <= IMPROVEMENT_RATE * prev) {
-        log << "\nSample size: " << N << endl;
-        log << "MultivariateNormal encoding rate: " << current/N << " bits/point" << endl;
-        log << "Null model encoding: " << null_msglen << " bits.";
-        log << "\t(" << null_msglen/N << " bits/point)" << endl;
-        break;
+  if (ESTIMATION == MML) {
+    while (1) {
+      // Expectation (E-step)
+      updateResponsibilityMatrix();
+      updateEffectiveSampleSize();
+      // Maximization (M-step)
+      updateWeights();
+      updateComponents();
+      current = computeMinimumMessageLength();
+      if (fabs(current) >= INFINITY) break;
+      msglens.push_back(current);
+      printParameters(log,iter,current);
+      if (iter != 1) {
+        assert(current > 0);
+        // because EM has to consistently produce lower 
+        // message lengths otherwise something wrong!
+        // IMPORTANT: the below condition should not be 
+        //          fabs(prev - current) <= 0.0001 * fabs(prev)
+        // ... it's very hard to satisfy this condition and EM() goes into
+        // ... an infinite loop!
+        if (iter > 10 && (prev - current) <= IMPROVEMENT_RATE * prev) {
+          log << "\nSample size: " << N << endl;
+          log << "vMF encoding rate: " << current/N << " bits/point" << endl;
+          log << "Null model encoding: " << null_msglen << " bits.";
+          log << "\t(" << null_msglen/N << " bits/point)" << endl;
+          break;
+        }
       }
+      prev = current;
+      iter++;
     }
-    prev = current;
-    iter++;
+  } else if (ESTIMATION == ML) {  // ESTIMATION != MML
+    while (1) {
+      // Expectation (E-step)
+      updateResponsibilityMatrix();
+      updateEffectiveSampleSize();
+      // Maximization (M-step)
+      updateWeights_ML();
+      updateComponents();
+      //current = negativeLogLikelihood(data);
+      current = computeMinimumMessageLength();
+      msglens.push_back(current);
+      printParameters(log,iter,current);
+      if (iter != 1) {
+        //assert(current > 0);
+        // because EM has to consistently produce lower 
+        // -ve likelihood values otherwise something wrong!
+        if (iter > 10 && (prev - current) <= IMPROVEMENT_RATE * prev) {
+          current = computeMinimumMessageLength();
+          log << "\nSample size: " << N << endl;
+          log << "vMF encoding rate (using ML): " << current/N << " bits/point" << endl;
+          log << "Null model encoding: " << null_msglen << " bits.";
+          log << "\t(" << null_msglen/N << " bits/point)" << endl;
+          break;
+        }
+      }
+      prev = current;
+      iter++;
+    }
   }
   log.close();
 }
@@ -576,7 +620,7 @@ void Mixture::printParameters(ostream &os)
  *  \param file_name a reference to a string
  *  \param D an integer
  */
-void Mixture::load(string &file_name)
+void Mixture::load(string &file_name, int D)
 {
   sample_size.clear();
   weights.clear();
@@ -585,12 +629,12 @@ void Mixture::load(string &file_name)
   ifstream file(file_name.c_str());
   string line;
   Vector numbers;
-  Vector unit_mean(3,0),mean(3,0);
-  Vector unit_mj(3,0),mj(3,0),unit_mi(3,0),mi(3,0);
+  Vector mean(D,0);
+  Matrix cov(D,D);
   long double sum_weights = 0;
   while (getline(file,line)) {
     K++;
-    boost::char_separator<char> sep("mujikapbet,:()[] \t");
+    boost::char_separator<char> sep("mucov,:()[] \t");
     boost::tokenizer<boost::char_separator<char> > tokens(line,sep);
     BOOST_FOREACH (const string& t, tokens) {
       istringstream iss(t);
@@ -600,21 +644,17 @@ void Mixture::load(string &file_name)
     }
     weights.push_back(numbers[0]);
     sum_weights += numbers[0];
-    for (int i=1; i<=3; i++) {
+    for (int i=1; i<=D; i++) {
       mean[i-1] = numbers[i];
-      mj[i-1] = numbers[i+3];
-      mi[i-1] = numbers[i+6];
     }
-    long double kappa = numbers[10];
-    long double beta = numbers[11];
-    long double ex = 2 * beta / kappa;
-    if (fabs(ex - 1) <= TOLERANCE) {
-      beta -= TOLERANCE;
+    int k = D + 1;
+    for (int i=0; i<D; i++) {
+      for (int j=0; j<D; j++) {
+        cov(i,j) = numbers[k++];
+      }
     }
-    normalize(mean,unit_mean);
-    normalize(mj,unit_mj); normalize(mi,unit_mi);
-    MultivariateNormal kent(unit_mean,unit_mj,unit_mi,kappa,beta);
-    components.push_back(kent);
+    MultivariateNormal mvnorm(mean,cov);
+    components.push_back(mvnorm);
     numbers.clear();
   }
   file.close();
@@ -631,9 +671,9 @@ void Mixture::load(string &file_name)
  *  \param d a reference to a std::vector<Vector>
  *  \param dw a reference to a Vector
  */
-void Mixture::load(string &file_name, std::vector<Vector> &d, Vector &dw)
+void Mixture::load(string &file_name, int D, std::vector<Vector> &d, Vector &dw)
 {
-  load(file_name);
+  load(file_name,D);
   data = d;
   N = data.size();
   data_weights = dw;
@@ -678,7 +718,7 @@ void Mixture::saveComponentData(int index, std::vector<Vector> &data)
   //components[index].printParameters(cout);
   ofstream file(data_file.c_str());
   for (int j=0; j<data.size(); j++) {
-    for (int k=0; k<3; k++) {
+    for (int k=0; k<data[0].size(); k++) {
       file << fixed << setw(10) << setprecision(3) << data[j][k];
     }
     file << endl;
@@ -943,30 +983,26 @@ Mixture Mixture::join(int c1, int c2, ostream &log)
  */
 void Mixture::generateHeatmapData(long double res)
 {
-  string data_fbins2D = "./visualize/prob_bins2D.dat";
-  string data_fbins3D = "./visualize/prob_bins3D.dat";
-  ofstream fbins2D(data_fbins2D.c_str());
-  ofstream fbins3D(data_fbins3D.c_str());
-  Vector x(3,1);
-  Vector point(3,0);
-  for (long double theta=0; theta<180; theta+=res) {
-    x[1] = theta * PI/180;
-    for (long double phi=0; phi<360; phi+=res) {
-      x[2] = phi * PI/180;
-      spherical2cartesian(x,point);
-      long double pr = exp(log_probability(point));
-      // 2D bins
-      fbins2D << fixed << setw(10) << setprecision(4) << floor(pr * 100);
-      // 3D bins
-      for (int k=0; k<3; k++) {
-        fbins3D << fixed << setw(10) << setprecision(4) << point[k];
+  if (data[0].size() == 2) {
+    long double MIN = -50;
+    long double MAX = 50;
+    string data_fbins2D = "./visualize/prob_bins2D.dat";
+    ofstream fbins2D(data_fbins2D.c_str());
+    Vector x(2,0);
+    for (long double x1=MIN; x1<=MAX; x1+=res) {
+      for (long double x2=MIN; x2<=MAX; x2+=res) {
+        x[0] = x1; x[1] = x2;
+        fbins2D << fixed << setw(10) << setprecision(3) << x1;
+        fbins2D << fixed << setw(10) << setprecision(3) << x2;
+        long double pr = exp(log_probability(x));
+        // 2D bins
+        fbins2D << fixed << setw(10) << setprecision(4) << floor(pr * 100);
+        // 3D bins
       }
-      fbins3D << fixed << setw(10) << setprecision(4) << pr << endl;
+      fbins2D << endl;
     }
-    fbins2D << endl;
+    fbins2D.close();
   }
-  fbins2D.close();
-  fbins3D.close();
 }
 
 /*!

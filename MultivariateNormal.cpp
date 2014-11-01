@@ -53,6 +53,12 @@ void MultivariateNormal::printParameters()
   cout << "Cov: " << cov << endl;
 }
 
+void MultivariateNormal::printParameters(ostream &os)
+{
+  os << "[mu]: "; print(os,mu,3);
+  os << "\t[cov]: " << cov << endl;
+}
+
 std::vector<Vector> MultivariateNormal::generate(int N)
 {
   // eigen decomposition of covariance matrix
