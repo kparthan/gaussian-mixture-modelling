@@ -2,7 +2,7 @@
 #define SUPPORT_H
 
 #include "Header.h"
-//#include "Mixture.h"
+#include "Mixture.h"
 #include "MultivariateNormal.h"
 
 struct Parameters
@@ -30,10 +30,7 @@ struct Parameters
   int sample_size;          // sample size to be generated from the simulated mixture
   int num_threads;          // flag to enable multithreading
   long double max_kappa;    // max value of kappa allowed
-  int start_from;           // starting value of number of components
-                            // during inference
-  int estimate_all;         // estimate using all methods
-  int compute_responsibility_matrix;  // flag
+  int start_from;           // starting value of number of components during inference
 };
 
 //! parameters associated with estimation
@@ -107,19 +104,13 @@ Vector generateRandomUnitVector(int);
 Vector generateFromSimplex(int);
 std::vector<MultivariateNormal> generateRandomComponents(int, int);
 std::vector<Vector> generateRandomGaussianMeans(int, int);
-//std::vector<std::vector<int> > updateBins(std::vector<Vector> &, long double);
-//void outputBins(std::vector<std::vector<int> > &, long double);
-//void computeEstimators(struct Parameters &);
-//void computeResponsibilityGivenMixture(struct Parameters &);
-//bool gatherData(struct Parameters &, std::vector<Vector> &);
-//void modelOneComponent(struct Parameters &, std::vector<Vector> &);
-//void modelMixture(struct Parameters &, std::vector<Vector> &);
-//void simulateMixtureModel(struct Parameters &);
-//pair<std::vector<Mixture>,std::vector<Mixture> > 
-//estimateMixturesUsingAllMethods(int, std::vector<Vector> &, ostream &);
-//Mixture inferComponents(Mixture &, int, ostream &);
-//void updateInference(Mixture &, Mixture &, ostream &, int);
-//void inferStableMixtures(std::vector<Vector> &, int, int, string &);
+void computeEstimators(struct Parameters &);
+bool gatherData(struct Parameters &, std::vector<Vector> &);
+void modelOneComponent(struct Parameters &, std::vector<Vector> &);
+void modelMixture(struct Parameters &, std::vector<Vector> &);
+void simulateMixtureModel(struct Parameters &);
+Mixture inferComponents(Mixture &, int, ostream &);
+void updateInference(Mixture &, Mixture &, ostream &, int);
 
 #endif
 

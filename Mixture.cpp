@@ -449,9 +449,6 @@ void Mixture::EM()
   string log_file = getLogFile();
   ofstream log(log_file.c_str());
 
-  computeNullModelMessageLength();
-  //cout << "null_msglen: " << null_msglen << endl;
-
   long double prev=0,current;
   int iter = 1;
   printParameters(log,0,0);
@@ -479,9 +476,7 @@ void Mixture::EM()
         // ... an infinite loop!
         if (iter > 10 && (prev - current) <= IMPROVEMENT_RATE * prev) {
           log << "\nSample size: " << N << endl;
-          log << "vMF encoding rate: " << current/N << " bits/point" << endl;
-          log << "Null model encoding: " << null_msglen << " bits.";
-          log << "\t(" << null_msglen/N << " bits/point)" << endl;
+          log << "encoding rate: " << current/N << " bits/point" << endl;
           break;
         }
       }
@@ -507,9 +502,7 @@ void Mixture::EM()
         if (iter > 10 && (prev - current) <= IMPROVEMENT_RATE * prev) {
           current = computeMinimumMessageLength();
           log << "\nSample size: " << N << endl;
-          log << "vMF encoding rate (using ML): " << current/N << " bits/point" << endl;
-          log << "Null model encoding: " << null_msglen << " bits.";
-          log << "\t(" << null_msglen/N << " bits/point)" << endl;
+          log << "encoding rate (using ML): " << current/N << " bits/point" << endl;
           break;
         }
       }
@@ -520,19 +513,6 @@ void Mixture::EM()
   log.close();
 }
 
-
-/*!
- *  \brief This function computes the null model message length.
- *  \return the null model message length
- */
-long double Mixture::computeNullModelMessageLength()
-{
-  // compute logarithm of surface area of nd-sphere
-  long double log_area = log(4*PI);
-  null_msglen = N * (log_area - (2*log(AOM)));
-  null_msglen /= log(2);
-  return null_msglen;
-}
 
 /*!
  *  \brief This function returns the minimum message length of this mixture
@@ -981,28 +961,55 @@ Mixture Mixture::join(int c1, int c2, ostream &log)
  *  \brief This function generates data to visualize the 2D/3D heat maps.
  *  \param res a long double
  */
-void Mixture::generateHeatmapData(long double res)
+void Mixture::generateHeatmapData(long double res, int D)
 {
-  if (data[0].size() == 2) {
-    long double MIN = -50;
-    long double MAX = 50;
-    string data_fbins2D = "./visualize/prob_bins2D.dat";
-    ofstream fbins2D(data_fbins2D.c_str());
-    Vector x(2,0);
-    for (long double x1=MIN; x1<=MAX; x1+=res) {
-      for (long double x2=MIN; x2<=MAX; x2+=res) {
-        x[0] = x1; x[1] = x2;
-        fbins2D << fixed << setw(10) << setprecision(3) << x1;
-        fbins2D << fixed << setw(10) << setprecision(3) << x2;
-        long double pr = exp(log_probability(x));
-        // 2D bins
-        fbins2D << fixed << setw(10) << setprecision(4) << floor(pr * 100);
-        // 3D bins
-      }
-      fbins2D << endl;
-    }
-    fbins2D.close();
+  int N = 10000;
+  sample_size = Vector(K,0);
+  for (int i=0; i<N; i++) {
+    int k = randomComponent();
+    sample_size[k]++;
   }
+
+  string mix_file = "./visualize/mixture_density.dat";
+  ofstream mix(mix_file.c_str());
+
+  long double comp_density,mix_density;
+  for (int i=0; i<K; i++) {
+    std::vector<Vector> x = components[i].generate(sample_size[i]);
+    string comp_file = "./visualize/comp" + boost::lexical_cast<string>(i+1) 
+                       + "_density.dat";
+    ofstream comp(comp_file.c_str());
+    for (int j=0; j<x.size(); j++) {
+      mix_density = exp(log_probability(x[j]));
+      comp_density = exp(components[i].log_density(x[j]));
+      for (int k=0; k<x[j].size(); k++) {
+        comp << fixed << setw(10) << setprecision(3) << x[j][k];
+        mix << fixed << setw(10) << setprecision(3) << x[j][k];
+      }
+      comp << fixed << setw(10) << setprecision(4) << comp_density * 100 << endl;
+      mix << fixed << setw(10) << setprecision(4) << mix_density * 100 << endl;
+    }
+    comp.close();
+  }
+  mix.close();
+
+  if (D == 2) {
+    string data_file = "./visualize/probability_density.dat";
+    ofstream file(data_file.c_str());
+    long double MIN = -10, MAX = 10;
+    long double x1,x2; 
+    Vector x(2,0);
+    for (x1=MIN; x1<MAX; x1+=res) {
+      for (x2=MIN; x2<MAX; x2+=res) {
+        x[0] = x1; x[1] = x2;
+        mix_density = exp(log_probability(x));
+        file << fixed << setw(10) << setprecision(3) << x[0];
+        file << fixed << setw(10) << setprecision(3) << x[1];
+        file << fixed << setw(10) << setprecision(4) << mix_density * 100 << endl;
+      } // x2
+    } // x1
+    file.close();
+  } // if()
 }
 
 /*!

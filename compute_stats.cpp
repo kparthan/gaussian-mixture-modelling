@@ -84,7 +84,8 @@ Vector computeMeans(std::vector<Vector> &table)
 Vector computeEstimateMeans(ostream &out, std::vector<Vector> &p_est_all)
 {
   Vector means = computeMeans(p_est_all);
-  for (int i=0; i<NUM_METHODS; i++) {
+  int num_cols = p_est_all[0].size();
+  for (int i=0; i<num_cols; i++) {
     out << scientific << means[i] << "\t";
   }
   out << endl;

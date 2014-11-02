@@ -124,9 +124,6 @@ class Mixture
     //! EM loop
     void EM();
 
-    //! Computes the null model message length
-    long double computeNullModelMessageLength();
-
     //! Prints the model parameters
     void printParameters(ostream &, int, long double);
 
@@ -161,7 +158,7 @@ class Mixture
     Mixture join(int, int, ostream &);
 
     //! Generate heat maps (for d=3)
-    void generateHeatmapData(long double);
+    void generateHeatmapData(long double, int);
 
     //! Get the nearest component
     int getNearestComponent(int);

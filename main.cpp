@@ -21,18 +21,13 @@ int main(int argc, char **argv)
     RunExperiments(parameters.iterations);
   }
 
-  /*if (parameters.read_profiles == SET && parameters.simulation == UNSET
-      && parameters.compute_responsibility_matrix == UNSET) {
+  if (parameters.read_profiles == SET && parameters.simulation == UNSET) {
     computeEstimators(parameters);
   } 
 
-  if (parameters.compute_responsibility_matrix == SET) {
-    computeResponsibilityGivenMixture(parameters);
-  }
-
   if (parameters.simulation == SET) {
     simulateMixtureModel(parameters);
-  }*/
+  }
 
   delete(uniform_generator);
 

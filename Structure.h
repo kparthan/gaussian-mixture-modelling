@@ -9,8 +9,7 @@ class Structure
     //! Structure identifier
     string name;
 
-    //! Stores the unit coordinates (\in R^D)
-    std::vector<Vector> unit_coordinates;
+    std::vector<Vector> coordinates;
 
   protected:
     //! Reads the profile from a file
@@ -30,7 +29,7 @@ class Structure
     void load(path &);
 
     //! Gets the list of unit coordinates
-    std::vector<Vector> getUnitCoordinates();
+    std::vector<Vector> getCoordinates();
 };
 
 #endif

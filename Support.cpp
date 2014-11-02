@@ -56,16 +56,14 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
        ("components",value<int>(&parameters.simulated_components),"# of simulated components")
        ("d",value<int>(&parameters.D),"dimensionality of data")
        ("samples",value<int>(&parameters.sample_size),"sample size generated")
-       ("bins","parameter to generate heat maps")
+       ("heatmap","parameter to generate heat maps")
        ("res",value<long double>(&parameters.res),"resolution used in heat map images")
        ("mt",value<int>(&parameters.num_threads),"flag to enable multithreading")
        ("parallelize",value<string>(&parallelize),"section of the code to parallelize")
        ("improvement",value<long double>(&improvement_rate),"improvement rate")
-       ("estimate_all","flag to estimate using all methods")
-       ("responsibility","flag to compute responsibility matrix")
+       ("estimate",value<string>(&estimation_method),"ML/MML")
   ;
   variables_map vm;
-  //store(parse_command_line(argc,argv,desc),vm);
   store(command_line_parser(argc,argv).options(desc).run(),vm);
   notify(vm);
 
@@ -88,7 +86,7 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
     parameters.experiments = UNSET;
   }
 
-  if (vm.count("bins")) {
+  if (vm.count("heatmap")) {
     parameters.heat_map = SET;
     if (!vm.count("res")) {
       parameters.res = DEFAULT_RESOLUTION;
@@ -130,18 +128,6 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
     parameters.mixture_model = UNSET;
   }
 
-  if (vm.count("estimate_all")) {
-    parameters.estimate_all = SET;
-  } else {
-    parameters.estimate_all = UNSET;
-  }
-
-  if (vm.count("responsibility")) {
-    parameters.compute_responsibility_matrix = SET;
-  } else {
-    parameters.compute_responsibility_matrix = UNSET;
-  }
-
   if (vm.count("simulate")) {
     parameters.simulation = SET;
     MIXTURE_SIMULATION = SET;
@@ -177,6 +163,13 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
     IMPROVEMENT_RATE = improvement_rate;
   } else {
     IMPROVEMENT_RATE = 0.0001; // 0.01 % default
+  }
+
+  ESTIMATION = MML;
+  if (vm.count("estimate")) {
+    if (estimation_method.compare("ml") == 0) {
+      ESTIMATION = ML;
+    }   
   }
 
   return parameters;
@@ -624,9 +617,9 @@ void TestFunctions()
 
   //test.determinant();
 
-  //test.random_data_generation();
+  test.random_data_generation();
 
-  test.all_estimates();
+  //test.all_estimates();
 }
 
 void RunExperiments(int iterations)
@@ -1226,569 +1219,264 @@ std::vector<Vector> generateRandomGaussianMeans(int num_components, int D)
   return random_means;
 }
 
-///*!
-// *  \brief This function bins the sample data 
-// *  \param res a long double
-// *  \param unit_coordinates a reference to a vector<vector<long double> > 
-// */
-//std::vector<std::vector<int> > updateBins(
-//  std::vector<Vector> &unit_coordinates, long double res
-//) {
-//  std::vector<std::vector<int> > bins;
-//  int num_rows = 180 / res;
-//  int num_cols = 360 / res;
-//  std::vector<int> tmp(num_cols,0);
-//  for (int i=0; i<num_rows; i++) {
-//    bins.push_back(tmp);
-//  }
-//
-//  long double theta,phi;
-//  int row,col;
-//  Vector spherical(3,0);
-//  for (int i=0; i<unit_coordinates.size(); i++) {
-//    //cout << "i: " << i << endl; 
-//    cartesian2spherical(unit_coordinates[i],spherical);
-//    theta = spherical[1] * 180 / PI;
-//    if (fabs(theta) <= ZERO) {
-//      row = 0;
-//    } else {
-//      row = (int)(ceil(theta/res) - 1);
-//    }
-//    phi = spherical[2] * 180 / PI;
-//    if (fabs(phi) <= ZERO) {
-//      col = 0;
-//    } else {
-//      col = (int)(ceil(phi/res) - 1);
-//    }
-//    if (row >= bins.size() || col >= bins[0].size()) {
-//      cout << "outside bounds: " << row << " " << col << "\n";
-//      cout << "theta: " << theta << " phi: " << phi << endl;
-//      cout << "spherical_1: " << spherical[1] << " spherical_2: " << spherical[2] << endl;
-//      cout << "unit_coordinates[i]_1: " << unit_coordinates[i][1] << " unit_coordinates[i]_2: " << unit_coordinates[i][2] << endl;
-//      fflush(stdout);
-//    }
-//    bins[row][col]++;
-//    //cout << "row,col: " << row << "," << col << endl;
-//  }
-//  return bins;
-//}
-//
-///*!
-// *  \brief This function outputs the bin data.
-// *  \param bins a reference to a std::vector<std::vector<int> >
-// */
-//void outputBins(std::vector<std::vector<int> > &bins, long double res)
-//{
-//  long double theta=0,phi;
-//  string fbins2D_file,fbins3D_file;
-//  fbins2D_file = "./visualize/bins2D.dat";
-//  fbins3D_file = "./visualize/bins3D.dat";
-//  ofstream fbins2D(fbins2D_file.c_str());
-//  ofstream fbins3D(fbins3D_file.c_str());
-//  Vector cartesian(3,0);
-//  Vector spherical(3,1);
-//  for (int i=0; i<bins.size(); i++) {
-//    phi = 0;
-//    spherical[1] = theta * PI / 180;
-//    for (int j=0; j<bins[i].size(); j++) {
-//      fbins2D << fixed << setw(10) << bins[i][j];
-//      phi += res;
-//      spherical[2] = phi * PI / 180;
-//      spherical2cartesian(spherical,cartesian);
-//      for (int k=0; k<3; k++) {
-//        fbins3D << fixed << setw(10) << setprecision(4) << cartesian[k];
-//      }
-//      fbins3D << fixed << setw(10) << bins[i][j] << endl;
-//    }
-//    theta += res;
-//    fbins2D << endl;
-//  }
-//  fbins2D.close();
-//  fbins3D.close();
-//}
-//
-///*!
-// *  \brief This function is used to read the angular profiles and use this data
-// *  to estimate parameters of a Von Mises distribution.
-// *  \param parameters a reference to a struct Parameters
-// */
-//void computeEstimators(struct Parameters &parameters)
-//{
-//  std::vector<Vector> unit_coordinates;
-//  bool success = gatherData(parameters,unit_coordinates);
-//  if (parameters.heat_map == SET && unit_coordinates[0].size() == 3) {
-//    std::vector<std::vector<int> > bins = updateBins(unit_coordinates,parameters.res);
-//    outputBins(bins,parameters.res);
-//  }
-//  if (success && parameters.mixture_model == UNSET) {  // no mixture modelling
-//    modelOneComponent(parameters,unit_coordinates);
-//  } else if (success && parameters.mixture_model == SET) { // mixture modelling
-//    modelMixture(parameters,unit_coordinates);
-//  }
-//}
-//
-///*!
-// *
-// */
-//void computeResponsibilityGivenMixture(struct Parameters &parameters)
-//{
-//  std::vector<Vector> unit_coordinates;
-//  bool success = gatherData(parameters,unit_coordinates);
-//  if (success) {
-//    Mixture mixture;
-//    mixture.load(parameters.mixture_file,parameters.D);
-//    mixture.computeResponsibilityMatrix(unit_coordinates,parameters.infer_log);
-//  } else {
-//    cout << "Something wrong in reading data ...\n";
-//    exit(1);
-//  }
-//}
-//
-///*!
-// *  \brief This function reads through the profiles from a given directory
-// *  and collects the data to do mixture modelling.
-// *  \param parameters a reference to a struct Parameters
-// *  \param unit_coordinates a reference to a std::vector<Vector>
-// */
-//bool gatherData(struct Parameters &parameters, std::vector<Vector> &unit_coordinates)
-//{
-//  if (parameters.profile_file.compare("") == 0) {
-//    path p(parameters.profiles_dir);
-//    cout << "path: " << p.string() << endl;
-//    if (exists(p)) { 
-//      if (is_directory(p)) { 
-//        std::vector<path> files; // store paths,
-//        copy(directory_iterator(p), directory_iterator(), back_inserter(files));
-//        cout << "# of profiles: " << files.size() << endl;
-//        int tid;
-//        std::vector<std::vector<Vector> > _unit_coordinates(NUM_THREADS);
-//        #pragma omp parallel num_threads(NUM_THREADS) private(tid)
-//        {
-//          tid = omp_get_thread_num();
-//          if (tid == 0) {
-//            cout << "# of threads: " << omp_get_num_threads() << endl;
-//          }
-//          #pragma omp for 
-//          for (int i=0; i<files.size(); i++) {
-//            Structure structure;
-//            structure.load(files[i]);
-//            std::vector<Vector> coords = structure.getUnitCoordinates();
-//            for (int j=0; j<coords.size(); j++) {
-//              _unit_coordinates[tid].push_back(coords[j]);
-//            }
-//          }
-//        }
-//        for (int i=0; i<NUM_THREADS; i++) {
-//          for (int j=0; j<_unit_coordinates[i].size(); j++) {
-//            unit_coordinates.push_back(_unit_coordinates[i][j]);
-//          }
-//        }
-//        cout << "# of profiles read: " << files.size() << endl;
-//        return 1;
-//      } else {
-//        cout << p << " exists, but is neither a regular file nor a directory\n";
-//      }
-//    } else {
-//      cout << p << " does not exist\n";
-//    }
-//    return 0;
-//  } else if (parameters.profiles_dir.compare("") == 0) {
-//    if (checkFile(parameters.profile_file)) {
-//      // read a single profile
-//      Structure structure;
-//      structure.load(parameters.profile_file);
-//      unit_coordinates = structure.getUnitCoordinates();
-//      return 1;
-//    } else {
-//      cout << "Profile " << parameters.profile_file << " does not exist ...\n";
-//      return 0;
-//    }
-//  }
-//}
-//
-///*!
-// *  \brief This function models a single component.
-// *  \param parameters a reference to a struct Parameters
-// *  \param data a reference to a std::vector<Vector>
-// */
-//void modelOneComponent(struct Parameters &parameters, std::vector<Vector> &data)
-//{
-//  cout << "Sample size: " << data.size() << endl;
-//  vMF vmf;
-//  Vector weights(data.size(),1);
-//  struct Estimates estimates;
-//  vmf.computeAllEstimators(data,estimates,1);
-//}
-//
-///*!
-// *  \brief This function models a mixture of several components.
-// *  \param parameters a reference to a struct Parameters
-// *  \param data a reference to a std::vector<std::vector<long double,3> >
-// */
-//void modelMixture(struct Parameters &parameters, std::vector<Vector> &data)
-//{
-//  Vector data_weights(data.size(),1);
-//  // if the optimal number of components need to be determined
-//  if (parameters.infer_num_components == SET) {
-//    if (parameters.max_components == -1) {
-//      Mixture mixture;
-//      if (parameters.continue_inference == UNSET) {
-//        Mixture m(parameters.start_from,data,data_weights);
-//        mixture = m;
-//        mixture.estimateParameters();
-//      } else if (parameters.continue_inference == SET) {
-//        mixture.load(parameters.mixture_file,parameters.D,data,data_weights);
-//      } // continue_inference
-//      ofstream log(parameters.infer_log.c_str());
-//      Mixture stable = inferComponents(mixture,data.size(),log);
-//      NUM_STABLE_COMPONENTS = stable.getNumberOfComponents();
-//      log.close();
-//    } else {  // parameters.max_components == -1
-//      inferStableMixtures(data,parameters.min_components,parameters.max_components,
-//                          parameters.infer_log);
-//    }
-//  } else if (parameters.infer_num_components == UNSET) {
-//    // for a given value of number of components
-//    // do the mixture modelling
-//    if (parameters.estimate_all == UNSET) { // estimate using only one method (MML)
-//      Mixture mixture(parameters.fit_num_components,data,data_weights);
-//      mixture.estimateParameters();
-//    } else if (parameters.estimate_all == SET) { // estimate using all methods
-//      ofstream log(parameters.infer_log.c_str());
-//      estimateMixturesUsingAllMethods(parameters.fit_num_components,data,log);
-//      log.close();
-//    }
-//  }
-//}
-//
-///*!
-// *  \brief This function is used to simulate the mixture model.
-// *  \param parameters a reference to a struct Parameters
-// */
-//void simulateMixtureModel(struct Parameters &parameters)
-//{
-//  std::vector<Vector> data;
-//  if (parameters.load_mixture == SET) {
-//    Mixture original;
-//    original.load(parameters.mixture_file,parameters.D);
-//    bool save = 1;
-//    if (parameters.read_profiles == SET) {
-//      bool success = gatherData(parameters,data);
-//      if (!success) {
-//        cout << "Error in reading data...\n";
-//        exit(1);
-//      }
-//    } else if (parameters.read_profiles == UNSET) {
-//      data = original.generate(parameters.sample_size,save);
-//    }
-//    if (parameters.heat_map == SET && parameters.D == 3) {
-//      original.generateHeatmapData(parameters.res);
-//      std::vector<std::vector<int> > bins = updateBins(data,parameters.res);
-//      outputBins(bins,parameters.res);
-//    }
-//  } else if (parameters.load_mixture == UNSET) {
-//    int k = parameters.simulated_components;
-//    //srand(time(NULL));
-//    Vector weights = generateFromSimplex(k);
-//    std::vector<vMF> components = generateRandomComponents(k,parameters.D);
-//    Mixture original(k,components,weights);
-//    bool save = 1;
-//    data = original.generate(parameters.sample_size,save);
-//    // save the simulated mixture
-//    ofstream file("./simulation/simulated_mixture");
-//    for (int i=0; i<k; i++) {
-//      file << fixed << setw(10) << setprecision(5) << weights[i];
-//      file << "\t";
-//      components[i].printParameters(file);
-//    }
-//    file.close();
-//  }
-//  // model a mixture using the original data
-//  if (parameters.mixture_model == UNSET) {
-//    modelOneComponent(parameters,data);
-//  } else if (parameters.mixture_model == SET) {
-//    modelMixture(parameters,data);
-//  }
-//}
-//
-///*!
-// *  \brief Estimates mixtures using all estimation methods
-// */
-//pair<std::vector<Mixture>,std::vector<Mixture> > estimateMixturesUsingAllMethods(
-//  int num_components, 
-//  std::vector<Vector> &data,
-//  ostream &log
-//) {
-//  Vector data_weights(data.size(),1);
-//  int NUM_ITERATIONS = 5;
-//  std::vector<Mixture> best_mixtures_mml,best_mixtures_all;
-//  int best_mml_iter;
-//  long double best_mml_msglen;
-//  std::vector<int> wins(NUM_METHODS,0);
-//
-//  log << "\nEstimating mixtures using all methods ...\n";
-//  log << "No. of components: " << num_components << endl << endl;
-//  for (int iter=1; iter<=NUM_ITERATIONS; iter++) {
-//    std::vector<Mixture> current_mixtures;
-//    Vector current_msglens(NUM_METHODS,0);
-//    log << "Iteration # " << iter << " ...\n";
-//    for (int i=0; i<NUM_METHODS; i++) {
-//      setEstimationMethod(i);
-//      Mixture mixture(num_components,data,data_weights);
-//      mixture.estimateParameters();
-//      current_msglens[i] = mixture.getMinimumMessageLength();
-//      if (i == ML_APPROX) {
-//        log << "ML_approx mixture\n";
-//      } else if (i == TANABE) {
-//        log << "Tanabe mixture\n";
-//      } else if (i == TRUNCATED_NEWTON) {
-//        log << "Truncated Newton mixture\n";
-//      } else if (i == SONG) {
-//        log << "Song mixture\n";
-//      } else if (i == MML_NEWTON) {
-//        log << "MML_Newton mixture\n";
-//      } else if (i == MML_HALLEY) {
-//        log << "MML_Halley mixture\n";
-//      }
-//      mixture.printParameters(log,1);
-//      current_mixtures.push_back(mixture);
-//    } // i loop ends ...
-//    int winner = minimumIndex(current_msglens);
-//    wins[winner]++;
-//    if (winner != MML_HALLEY) {
-//      log << "Iteration # " << iter << " unsuccessful ...\n\n";
-//      print(log,current_msglens,3); 
-//      log << endl;
-//    }
-//    if (iter != 1) {
-//      // update best mml mixtures
-//      if (current_msglens[MML_HALLEY] < best_mml_msglen) {
-//        best_mml_iter = iter;
-//        best_mml_msglen = current_msglens[MML_HALLEY];
-//        best_mixtures_mml = current_mixtures;
-//      }
-//      // update best all mixtures
-//      for (int i=0; i<NUM_METHODS; i++) {
-//        if (current_msglens[i] < best_mixtures_all[i].getMinimumMessageLength()) {
-//          best_mixtures_all[i] = current_mixtures[i];
-//        }
-//      } // i loop ends ...
-//    } else if (iter == 1) {
-//      best_mml_iter = iter;
-//      best_mml_msglen = current_msglens[MML_HALLEY];
-//      best_mixtures_mml = current_mixtures;
-//      best_mixtures_all = current_mixtures;
-//    }
-//  } // iter loop ends ...
-//
-//  log << "Wins (ML_APPROX:Tanabe:TruncNewton:Song:MML_NEWTON:MML_Halley): (" 
-//      << wins[ML_APPROX] << ":" << wins[TANABE] << ":" << wins[TRUNCATED_NEWTON] << ":"
-//      << wins[SONG] << ":" << wins[MML_NEWTON] << ":" << wins[MML_HALLEY] << ")\n";
-//      
-//  log << "Best MML mixture @ iteration: " << best_mml_iter << endl;
-//  log << "BEST MIXTURES ALL:\n";
-//  for (int i=0; i<best_mixtures_all.size(); i++) {
-//    best_mixtures_all[i].printParameters(log,1);
-//  }
-//  return pair<std::vector<Mixture>,std::vector<Mixture> >(best_mixtures_mml,best_mixtures_all);
-//}
-//
-///*!
-// *  \brief This function is used to infer optimum number of mixture components.
-// *  \param mixture a reference to a Mixture
-// *  \param N an integer
-// *  \param log a reference to a ostream 
-// */
-//Mixture inferComponents(Mixture &mixture, int N, ostream &log)
-//{
-//  int K,iter = 0;
-//  std::vector<vMF> components;
-//  Mixture modified,improved,parent;
-//  Vector sample_size;
-//  //long double min_n = 0.01 * N;
-//  long double min_n = 1;
-//  long double null_msglen = mixture.computeNullModelMessageLength();
-//  log << "Null model encoding: " << null_msglen << " bits."
-//      << "\t(" << null_msglen/N << " bits/point)\n\n";
-//
-//  improved = mixture;
-//
-//  while (1) {
-//    parent = improved;
-//    iter++;
-//    log << "Iteration #" << iter << endl;
-//    log << "Parent:\n";
-//    parent.printParameters(log,1);
-//    components = parent.getComponents();
-//    sample_size = parent.getSampleSize();
-//    K = components.size();
-//    for (int i=0; i<K; i++) { // split() ...
-//      if (sample_size[i] > min_n) {
-//        modified = parent.split(i,log);
-//        updateInference(modified,improved,log,SPLIT);
-//      }
-//    }
-//    if (K >= 2) {  // kill() ...
-//      for (int i=0; i<K; i++) {
-//        modified = parent.kill(i,log);
-//        updateInference(modified,improved,log,KILL);
-//      } // killing each component
-//    } // if (K > 2) loop
-//    if (K > 1) {  // join() ...
-//      for (int i=0; i<K; i++) {
-//        int j = parent.getNearestComponent(i); // closest component
-//        modified = parent.join(i,j,log);
-//        updateInference(modified,improved,log,JOIN);
-//      } // join() ing nearest components
-//    } // if (K > 1) loop
-//    if (improved == parent) goto finish;
-//  } // if (improved == parent || iter%2 == 0) loop
-//
-//  finish:
-//  return parent;
-//}
-//
-///*!
-// *  \brief Updates the inference
-// *  \param modified a reference to a Mixture
-// *  \param current a reference to a Mixture
-// *  \param log a reference to a ostream
-// *  \param operation an integer
-// */
-//void updateInference(Mixture &modified, Mixture &current, ostream &log, int operation)
-//{
-//  long double modified_msglen = modified.getMinimumMessageLength();
-//  long double current_msglen = current.getMinimumMessageLength();
-//
-//  if (modified_msglen < current_msglen) {   // ... improvement
-//    long double improvement_rate = (current_msglen - modified_msglen) / current_msglen;
-//    if (operation == JOIN || 
-//        improvement_rate > IMPROVEMENT_RATE) {  // there is > 0.001 % improvement
-//      current = modified;
-//      log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
-//          << 100 * improvement_rate << " %) ";
-//      if (operation == JOIN && improvement_rate < IMPROVEMENT_RATE) {
-//        log << "\t\t[ACCEPT] with negligible improvement (while joining)!\n\n";
-//      } else {
-//        log << "\t\t[ACCEPT]\n\n";
-//      }
-//    } else {  // ... no substantial improvement
-//      log << "\t ... IMPROVEMENT < " << fixed << setprecision(3) 
-//          << 100 * IMPROVEMENT_RATE << " %\t\t\t[REJECT]\n\n";
-//    }
-//  } else {    // ... no improvement
-//    log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
-//  }
-//}
-//
-///*!
-// *  \brief Infers stable mixtures from K=min_k to K=max_k and plots them
-// */
-//void inferStableMixtures(
-//  std::vector<Vector> &data, 
-//  int min_k, 
-//  int max_k, 
-//  string &log_file
-//) {
-//  ofstream log(log_file.c_str());
-//
-//  string msglens_file = log_file + ".msglens.dat";
-//  string aic_file = log_file + ".aic.dat";
-//  string bic_file = log_file + ".bic.dat";
-//  string parts_file = log_file + ".parts.dat";
-//  ofstream msglens(msglens_file.c_str());
-//  ofstream aic(aic_file.c_str());
-//  ofstream bic(bic_file.c_str());
-//  ofstream parts(parts_file.c_str());
-//
-//  Vector current_msglens(NUM_METHODS,0),current_aic(NUM_METHODS,0),current_bic(NUM_METHODS,0);
-//  Vector individual_msglens(2,0);
-//
-//  for (int k=min_k; k<=max_k; k++) {
-//    pair<std::vector<Mixture>,std::vector<Mixture> > 
-//      mixtures = estimateMixturesUsingAllMethods(k,data,log);
-//    std::vector<Mixture> best_mixtures_mml = mixtures.first;
-//    std::vector<Mixture> best_mixtures_all = mixtures.second;
-//    for (int i=0; i<NUM_METHODS; i++) {
-//      current_msglens[i] = best_mixtures_all[i].getMinimumMessageLength();
-//      current_aic[i] = best_mixtures_all[i].computeAIC();
-//      current_bic[i] = best_mixtures_all[i].computeBIC();
-//      if (i == MML_HALLEY) {
-//        individual_msglens[0] = best_mixtures_all[i].first_part();
-//        individual_msglens[1] = best_mixtures_all[i].second_part();
-//      } 
-//    } // i loop ends ...
-//    msglens << fixed << setw(10) << k;
-//    aic << fixed << setw(10) << k;
-//    bic << fixed << setw(10) << k;
-//    parts << fixed << setw(10) << k;
-//
-//    for (int i=0; i<NUM_METHODS; i++) {
-//      msglens << fixed << setw(15) << setprecision(3) << current_msglens[i];
-//      aic << fixed << setw(15) << setprecision(3) << current_aic[i];
-//      bic << fixed << setw(15) << setprecision(3) << current_bic[i];
-//    }
-//    msglens << endl; aic << endl; bic << endl;
-//    parts << fixed << setw(15) << setprecision(3) << individual_msglens[0];
-//    parts << fixed << setw(15) << setprecision(3) << individual_msglens[1];
-//    parts << fixed << setw(15) << setprecision(3) 
-//          << individual_msglens[0]+individual_msglens[1] << endl;
-//
-//  } // k loop ends ...
-//  string script_file,data_file,plot_file,ylabel,title;
-//  for (int i=0; i<3; i++) {
-//    if (i == 0) {
-//      script_file = log_file + ".msglens.p";
-//      data_file = msglens_file;
-//      plot_file = log_file + ".msglens.eps";
-//      title = "COMPARISON OF MESSAGE LEGTHS";
-//      ylabel = "Message length (in bits)";
-//    } else if (i == 1) {
-//      script_file = log_file + ".aic.p";
-//      data_file = aic_file;
-//      plot_file = log_file + ".aic.eps";
-//      title = "COMPARISON OF AIC VALUES";
-//      ylabel = "AIC (measured in bits)";
-//    } else if (i == 2) {
-//      script_file = log_file + ".bic.p";
-//      data_file = bic_file;
-//      plot_file = log_file + ".bic.eps";
-//      title = "COMPARISON OF BIC VALUES";
-//      ylabel = "BIC (measured in bits)";
-//    }
-//    ofstream script(script_file.c_str());
-//    script << "set terminal post eps" << endl ;
-//    script << "set autoscale\t" ;
-//    script << "# scale axes automatically" << endl ;
-//    script << "set xtic auto\t" ;
-//    script << "# set xtics automatically" << endl ;
-//    script << "set ytic auto\t" ;
-//    script << "# set ytics automatically" << endl ;
-//    script << "set style data lines" << endl;
-//    script << "set title \"" << title << "\"" << endl ;
-//    script << "set xlabel \"Number of components (K)\"" << endl ;
-//    script << "set ylabel \"" << ylabel << "\"" << endl ;
-//    script << "set xrange [" << min_k << ":]" << endl;
-//    script << "set output \"" << plot_file << "\"" << endl ;
-//    script << "plot \"" << data_file << "\" using 1:2 title \"Banerjee\" ";
-//    script << "lt 1 lc rgb \"red\", \\" << endl;
-//    script << "\"" << data_file << "\" using 1:3 title \"MLE\" ";
-//    script << "lt 1 lc rgb \"blue\", \\" << endl;
-//    script << "\"" << data_file << "\" using 1:4 title \"Tanabe\" ";
-//    script << "lt 1 lc rgb \"green\", \\" << endl ;
-//    script << "\"" << data_file << "\" using 1:5 title \"Truncated Newton\" ";
-//    script << "lt 1 lc rgb \"gold\", \\" << endl ;
-//    script << "\"" << data_file << "\" using 1:6 title \"Song\" ";
-//    script << "lt 1 lc rgb \"orange\", \\" << endl ;
-//    script << "\"" << data_file << "\" using 1:7 title \"MML_Newton\" ";
-//    script << "lt 1 lc rgb \"purple\", \\" << endl ;
-//    script << "\"" << data_file << "\" using 1:8 title \"MML_Halley\" ";
-//    script << "lt 1 lc rgb \"black\", \\" << endl ;
-//    script << "\"" << data_file << "\" using 1:9 title \"MML_Complete\" ";
-//    script << "lt 1 lc rgb \"brown\"" << endl ;
-//    script.close();
-//    string cmd = "gnuplot -persist " + script_file; 
-//    if(system(cmd.c_str()));
-//  } // i loop ends ...
-//}
-//
+/*!
+ *  \brief This function is used to read the angular profiles and use this data
+ *  to estimate parameters of a Von Mises distribution.
+ *  \param parameters a reference to a struct Parameters
+ */
+void computeEstimators(struct Parameters &parameters)
+{
+  std::vector<Vector> coordinates;
+  bool success = gatherData(parameters,coordinates);
+  /*if (parameters.heat_map == SET && coordinates[0].size() == 3) {
+    std::vector<std::vector<int> > bins = updateBins(coordinates,parameters.res);
+    outputBins(bins,parameters.res);
+  }*/
+  if (success && parameters.mixture_model == UNSET) {  // no mixture modelling
+    modelOneComponent(parameters,coordinates);
+  } else if (success && parameters.mixture_model == SET) { // mixture modelling
+    modelMixture(parameters,coordinates);
+  }
+}
+
+/*!
+ *  \brief This function reads through the profiles from a given directory
+ *  and collects the data to do mixture modelling.
+ *  \param parameters a reference to a struct Parameters
+ *  \param coordinates a reference to a std::vector<Vector>
+ */
+bool gatherData(struct Parameters &parameters, std::vector<Vector> &coordinates)
+{
+  if (parameters.profile_file.compare("") == 0) {
+    path p(parameters.profiles_dir);
+    cout << "path: " << p.string() << endl;
+    if (exists(p)) { 
+      if (is_directory(p)) { 
+        std::vector<path> files; // store paths,
+        copy(directory_iterator(p), directory_iterator(), back_inserter(files));
+        cout << "# of profiles: " << files.size() << endl;
+        int tid;
+        std::vector<std::vector<Vector> > _coordinates(NUM_THREADS);
+        #pragma omp parallel num_threads(NUM_THREADS) private(tid)
+        {
+          tid = omp_get_thread_num();
+          if (tid == 0) {
+            cout << "# of threads: " << omp_get_num_threads() << endl;
+          }
+          #pragma omp for 
+          for (int i=0; i<files.size(); i++) {
+            Structure structure;
+            structure.load(files[i]);
+            std::vector<Vector> coords = structure.getCoordinates();
+            for (int j=0; j<coords.size(); j++) {
+              _coordinates[tid].push_back(coords[j]);
+            }
+          }
+        }
+        for (int i=0; i<NUM_THREADS; i++) {
+          for (int j=0; j<_coordinates[i].size(); j++) {
+            coordinates.push_back(_coordinates[i][j]);
+          }
+        }
+        cout << "# of profiles read: " << files.size() << endl;
+        return 1;
+      } else {
+        cout << p << " exists, but is neither a regular file nor a directory\n";
+      }
+    } else {
+      cout << p << " does not exist\n";
+    }
+    return 0;
+  } else if (parameters.profiles_dir.compare("") == 0) {
+    if (checkFile(parameters.profile_file)) {
+      // read a single profile
+      Structure structure;
+      structure.load(parameters.profile_file);
+      coordinates = structure.getCoordinates();
+      return 1;
+    } else {
+      cout << "Profile " << parameters.profile_file << " does not exist ...\n";
+      return 0;
+    }
+  }
+}
+
+/*!
+ *  \brief This function models a single component.
+ *  \param parameters a reference to a struct Parameters
+ *  \param data a reference to a std::vector<Vector>
+ */
+void modelOneComponent(struct Parameters &parameters, std::vector<Vector> &data)
+{
+  cout << "Sample size: " << data.size() << endl;
+  MultivariateNormal mvnorm;
+  Vector weights(data.size(),1);
+  struct Estimates estimates;
+  mvnorm.computeAllEstimators(data,estimates,1);
+}
+
+/*!
+ *  \brief This function models a mixture of several components.
+ *  \param parameters a reference to a struct Parameters
+ *  \param data a reference to a std::vector<std::vector<long double,3> >
+ */
+void modelMixture(struct Parameters &parameters, std::vector<Vector> &data)
+{
+  Vector data_weights(data.size(),1);
+  // if the optimal number of components need to be determined
+  if (parameters.infer_num_components == SET) {
+    if (parameters.max_components == -1) {
+      Mixture mixture;
+      if (parameters.continue_inference == UNSET) {
+        Mixture m(parameters.start_from,data,data_weights);
+        mixture = m;
+        mixture.estimateParameters();
+      } else if (parameters.continue_inference == SET) {
+        mixture.load(parameters.mixture_file,parameters.D,data,data_weights);
+      } // continue_inference
+      ofstream log(parameters.infer_log.c_str());
+      Mixture stable = inferComponents(mixture,data.size(),log);
+      NUM_STABLE_COMPONENTS = stable.getNumberOfComponents();
+      log.close();
+    }   
+  } else if (parameters.infer_num_components == UNSET) {
+    // for a given value of number of components
+    // do the mixture modelling
+    Mixture mixture(parameters.fit_num_components,data,data_weights);
+    mixture.estimateParameters();
+  }
+}
+
+/*!
+ *  \brief This function is used to simulate the mixture model.
+ *  \param parameters a reference to a struct Parameters
+ */
+void simulateMixtureModel(struct Parameters &parameters)
+{
+  std::vector<Vector> data;
+  if (parameters.load_mixture == SET) {
+    Mixture original;
+    original.load(parameters.mixture_file,parameters.D);
+    bool save = 1;
+    if (parameters.read_profiles == SET) {
+      bool success = gatherData(parameters,data);
+      if (!success) {
+        cout << "Error in reading data...\n";
+        exit(1);
+      }
+    } else if (parameters.read_profiles == UNSET) {
+      data = original.generate(parameters.sample_size,save);
+    }
+    if (parameters.heat_map == SET && (parameters.D == 2 || parameters.D == 3)) {
+      original.generateHeatmapData(parameters.res,parameters.D);
+    }
+  } else if (parameters.load_mixture == UNSET) {
+    int k = parameters.simulated_components;
+    //srand(time(NULL));
+    Vector weights = generateFromSimplex(k);
+    std::vector<MultivariateNormal> components = generateRandomComponents(k,parameters.D);
+    Mixture original(k,components,weights);
+    bool save = 1;
+    data = original.generate(parameters.sample_size,save);
+    // save the simulated mixture
+    ofstream file("./simulation/simulated_mixture");
+    for (int i=0; i<k; i++) {
+      file << fixed << setw(10) << setprecision(5) << weights[i];
+      file << "\t";
+      components[i].printParameters(file);
+    }
+    file.close();
+  }
+  // model a mixture using the original data
+  if (parameters.mixture_model == UNSET) {
+    modelOneComponent(parameters,data);
+  } else if (parameters.mixture_model == SET) {
+    modelMixture(parameters,data);
+  }
+}
+
+/*!
+ *  \brief This function is used to infer optimum number of mixture components.
+ *  \param mixture a reference to a Mixture
+ *  \param N an integer
+ *  \param log a reference to a ostream 
+ */
+Mixture inferComponents(Mixture &mixture, int N, ostream &log)
+{
+  int K,iter = 0;
+  std::vector<MultivariateNormal> components;
+  Mixture modified,improved,parent;
+  Vector sample_size;
+  //long double min_n = 0.01 * N;
+  long double min_n = 1;
+
+  improved = mixture;
+
+  while (1) {
+    parent = improved;
+    iter++;
+    log << "Iteration #" << iter << endl;
+    log << "Parent:\n";
+    parent.printParameters(log,1);
+    components = parent.getComponents();
+    sample_size = parent.getSampleSize();
+    K = components.size();
+    for (int i=0; i<K; i++) { // split() ...
+      if (sample_size[i] > min_n) {
+        modified = parent.split(i,log);
+        updateInference(modified,improved,log,SPLIT);
+      }
+    }
+    if (K >= 2) {  // kill() ...
+      for (int i=0; i<K; i++) {
+        modified = parent.kill(i,log);
+        updateInference(modified,improved,log,KILL);
+      } // killing each component
+    } // if (K > 2) loop
+    if (K > 1) {  // join() ...
+      for (int i=0; i<K; i++) {
+        int j = parent.getNearestComponent(i); // closest component
+        modified = parent.join(i,j,log);
+        updateInference(modified,improved,log,JOIN);
+      } // join() ing nearest components
+    } // if (K > 1) loop
+    if (improved == parent) goto finish;
+  } // if (improved == parent || iter%2 == 0) loop
+
+  finish:
+  return parent;
+}
+
+/*!
+ *  \brief Updates the inference
+ *  \param modified a reference to a Mixture
+ *  \param current a reference to a Mixture
+ *  \param log a reference to a ostream
+ *  \param operation an integer
+ */
+void updateInference(Mixture &modified, Mixture &current, ostream &log, int operation)
+{
+  long double modified_msglen = modified.getMinimumMessageLength();
+  long double current_msglen = current.getMinimumMessageLength();
+
+  if (modified_msglen < current_msglen) {   // ... improvement
+    long double improvement_rate = (current_msglen - modified_msglen) / current_msglen;
+    if (operation == JOIN || 
+        improvement_rate > IMPROVEMENT_RATE) {  // there is > 0.001 % improvement
+      current = modified;
+      log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
+          << 100 * improvement_rate << " %) ";
+      if (operation == JOIN && improvement_rate < IMPROVEMENT_RATE) {
+        log << "\t\t[ACCEPT] with negligible improvement (while joining)!\n\n";
+      } else {
+        log << "\t\t[ACCEPT]\n\n";
+      }
+    } else {  // ... no substantial improvement
+      log << "\t ... IMPROVEMENT < " << fixed << setprecision(3) 
+          << 100 * IMPROVEMENT_RATE << " %\t\t\t[REJECT]\n\n";
+    }
+  } else {    // ... no improvement
+    log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
+  }
+}
+

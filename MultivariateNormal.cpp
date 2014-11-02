@@ -56,7 +56,15 @@ void MultivariateNormal::printParameters()
 void MultivariateNormal::printParameters(ostream &os)
 {
   os << "[mu]: "; print(os,mu,3);
-  os << "\t[cov]: " << cov << endl;
+  os << "\t[cov]: (";
+  for (int i=0; i<D; i++) {
+    os << "(";
+    for (int j=0; j<D-1; j++) {
+      os << fixed << setprecision(3) << cov(i,j) << ", ";
+    }
+    os << fixed << setprecision(3) << cov(i,D-1) << ")";
+  }
+  os << ")" << endl;
 }
 
 std::vector<Vector> MultivariateNormal::generate(int N)
