@@ -459,6 +459,9 @@ void Mixture::EM()
       // Expectation (E-step)
       updateResponsibilityMatrix();
       updateEffectiveSampleSize();
+      for (int i=0; i<K; i++) {
+        if (sample_size[i] < 1) goto stop;
+      }
       // Maximization (M-step)
       updateWeights();
       updateComponents();
@@ -475,6 +478,7 @@ void Mixture::EM()
         // ... it's very hard to satisfy this condition and EM() goes into
         // ... an infinite loop!
         if (iter > 10 && (prev - current) <= IMPROVEMENT_RATE * prev) {
+          stop:
           log << "\nSample size: " << N << endl;
           log << "encoding rate: " << current/N << " bits/point" << endl;
           break;
@@ -810,9 +814,11 @@ Mixture Mixture::split(int c, ostream &log)
   Vector data_weights_m(N,1);
   Mixture merged(K_m,components_m,weights_m,sample_size_m,responsibility_m,data,data_weights_m);
   log << "\t\tBefore adjustment ...\n";
+  merged.computeMinimumMessageLength();
   merged.printParameters(log,2);
   merged.EM();
   log << "\t\tAfter adjustment ...\n";
+  merged.computeMinimumMessageLength();
   merged.printParameters(log,2);
   return merged;
 }
@@ -830,7 +836,12 @@ Mixture Mixture::kill(int c, ostream &log)
   int K_m = K - 1;
   // adjust weights
   Vector weights_m(K_m,0);
-  long double residual_sum = 1 - weights[c];
+  long double residual_sum = 0;
+  for (int i=0; i<K; i++) {
+    if (i != c) {
+      residual_sum += weights[i];
+    }
+  }
   long double wt;
   int index = 0;
   for (int i=0; i<K; i++) {
@@ -840,15 +851,25 @@ Mixture Mixture::kill(int c, ostream &log)
   }
 
   // adjust responsibility matrix
+  Vector residual_sums(N,0);
+  for (int i=0; i<N; i++) {
+    for (int j=0; j<K; j++) {
+      if (j != c) {
+        residual_sums[i] += responsibility[j][i];
+      }
+    }
+    if (residual_sums[i] < TOLERANCE) residual_sums[i] = TOLERANCE;
+  }
   Vector resp(N,0);
   std::vector<Vector> responsibility_m(K_m,resp);
   index = 0;
   for (int i=0; i<K; i++) {
     if (i != c) {
-      #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) private(residual_sum) 
+      //#pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) private(residual_sum) 
       for (int j=0; j<N; j++) {
-        residual_sum = 1 - responsibility[c][j];
-        responsibility_m[index][j] = responsibility[i][j] / residual_sum;
+        //residual_sum = 1 - responsibility[c][j];
+        responsibility_m[index][j] = responsibility[i][j] / residual_sums[j];
+        assert(responsibility_m[index][j] >= 0 && responsibility_m[index][j] <= 1);
       }
       index++;
     }
@@ -878,9 +899,11 @@ Mixture Mixture::kill(int c, ostream &log)
   Vector data_weights_m(N,1);
   Mixture modified(K_m,components_m,weights_m,sample_size_m,responsibility_m,data,data_weights_m);
   log << "\t\tBefore adjustment ...\n";
+  modified.computeMinimumMessageLength();
   modified.printParameters(log,2);
   modified.EM();
   log << "\t\tAfter adjustment ...\n";
+  //modified.computeMinimumMessageLength();
   modified.printParameters(log,2);
   return modified;
 }

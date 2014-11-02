@@ -5,6 +5,7 @@ extern UniformRandomNumberGenerator *uniform_generator;
 
 int main(int argc, char **argv)
 {
+  srand(time(NULL));
   UniformReal uniform_distribution(0,1);
   RandomNumberGenerator generator;
   Generator num_gen(generator,uniform_distribution); 
