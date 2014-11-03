@@ -271,6 +271,7 @@ long double MultivariateNormal::computeMessageLength(std::vector<Vector> &data)
 long double MultivariateNormal::computeLogParametersProbability(long double Neff)
 {
   long double log_prior_density = computeLogPriorDensity();
+  //long double log_prior_density = 0;
   long double log_expected_fisher = computeLogFisherInformation(Neff);
   long double logp = -log_prior_density + 0.5 * log_expected_fisher;
   return logp;

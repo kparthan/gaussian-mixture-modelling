@@ -1,0 +1,27 @@
+Iteration #1
+Parent:
+	[ 1]	   800.000	   1.00000	[mu]: (1.035, 0.048)		[cov]: ((2.032, -0.074)(-0.074, 0.943))
+	ID: 38
+	MultivariateNormal encoding: 19621.019 bits. (24.526 bits/point)
+
+	SPLIT component 1 ... 
+		Children:
+		[ 1]	   364.430	   0.45559	[mu]: (1.018, 0.021)		[cov]: ((2.064, -0.056)(-0.056, 0.755))
+		[ 2]	   435.570	   0.54441	[mu]: (1.049, 0.070)		[cov]: ((2.005, -0.090)(-0.090, 1.098))
+		ID: 42
+		MultivariateNormal encoding: 19639.292 bits. (24.549 bits/point)
+
+		Before adjustment ...
+		[ 1]	   364.430	   0.45559	[mu]: (1.018, 0.021)		[cov]: ((2.064, -0.056)(-0.056, 0.755))
+		[ 2]	   435.570	   0.54441	[mu]: (1.049, 0.070)		[cov]: ((2.005, -0.090)(-0.090, 1.098))
+		ID: 43
+		MultivariateNormal encoding: 19639.292 bits. (24.549 bits/point)
+
+		After adjustment ...
+		[ 1]	   368.388	   0.46053	[mu]: (1.022, 0.018)		[cov]: ((2.079, -0.029)(-0.029, 0.696))
+		[ 2]	   431.612	   0.53947	[mu]: (1.046, 0.073)		[cov]: ((1.992, -0.113)(-0.113, 1.152))
+		ID: 43
+		MultivariateNormal encoding: 19639.020 bits. (24.549 bits/point)
+
+	 ... NO IMPROVEMENT			[REJECT]
+

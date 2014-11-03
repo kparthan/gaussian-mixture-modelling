@@ -627,7 +627,9 @@ void RunExperiments(int iterations)
   Experiments experiments(iterations);
 
   //experiments.simulate(3);
-  experiments.simulate(5);
+  //experiments.simulate(5);
+
+  experiments.infer_components_exp1();
 }
 
 ////////////////////// GEOMETRY FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -1337,6 +1339,7 @@ void modelMixture(struct Parameters &parameters, std::vector<Vector> &data)
       ofstream log(parameters.infer_log.c_str());
       Mixture stable = inferComponents(mixture,data.size(),log);
       NUM_STABLE_COMPONENTS = stable.getNumberOfComponents();
+      //cout << "stable: " << NUM_STABLE_COMPONENTS << endl;
       log.close();
     }   
   } else if (parameters.infer_num_components == UNSET) {

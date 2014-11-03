@@ -1,6 +1,12 @@
 #include "Experiments.h"
-#include "MultivariateNormal.h"
-#include "Support.h"
+
+extern int MIXTURE_SIMULATION;
+extern int INFER_COMPONENTS;
+extern int ENABLE_DATA_PARALLELISM;
+extern int NUM_THREADS;
+extern int ESTIMATION;
+extern long double IMPROVEMENT_RATE;
+extern int NUM_STABLE_COMPONENTS;
 
 Experiments::Experiments(int iterations) : iterations(iterations)
 {}
@@ -58,5 +64,75 @@ void Experiments::simulate(int D)
     logneg << endl; logmsg << endl; logkldiv << endl; 
   }
   logneg.close(); logmsg.close(); logkldiv.close();
+}
+
+// ./experiments/infer_components/exp1/
+// bivariate data, covariance = I
+void Experiments::infer_components_exp1()
+{
+  int N = 800;
+  long double delta = 2;
+
+  int D = 2;
+  Vector mu1(D,0);
+  Vector mu2(D,0); mu2[0] = delta;
+  Matrix C1 = IdentityMatrix(D,D);
+  Matrix C2 = IdentityMatrix(D,D);
+
+  MultivariateNormal mvnorm1(mu1,C1);
+  MultivariateNormal mvnorm2(mu2,C2);
+
+  Vector weights(2,0.5);
+  std::vector<MultivariateNormal> components;
+  components.push_back(mvnorm1);
+  components.push_back(mvnorm2);
+  Mixture original(2,components,weights);
+
+  // iterations = 50 (in paper)
+  struct Parameters parameters;
+  parameters.simulation = SET;
+  parameters.load_mixture = UNSET;
+  parameters.D = D;
+  parameters.read_profiles = UNSET;
+  parameters.mixture_model = SET;
+  parameters.infer_num_components = SET;
+  parameters.max_components = -1;
+  parameters.continue_inference = UNSET;
+  parameters.start_from = 1;
+  parameters.heat_map = UNSET;
+  parameters.sample_size = N;
+  INFER_COMPONENTS = SET;
+  MIXTURE_SIMULATION = SET;
+  NUM_THREADS = 1;
+  ENABLE_DATA_PARALLELISM = UNSET;
+  ESTIMATION = MML;
+  IMPROVEMENT_RATE = 0.00001;
+    
+  string results_folder = "./experiments/infer_components/exp1/";
+  inferExperimentalMixtures(original,delta,results_folder,parameters);
+}
+
+void Experiments::inferExperimentalMixtures(
+  Mixture &original, 
+  long double delta,
+  string &results_folder,
+  struct Parameters &parameters
+) {
+  string infer_log,summary_log;
+  string delta_str = "delta_" + boost::lexical_cast<string>(delta);
+  summary_log = results_folder + "summary/" + delta_str;
+  ofstream summary(summary_log.c_str());
+  for (int iter=1; iter<=iterations; iter++) {
+    infer_log = results_folder + "logs/" + delta_str
+                + "_iter_" + boost::lexical_cast<string>(iter);
+    parameters.infer_log = infer_log;
+
+    std::vector<Vector> data = original.generate(parameters.sample_size,0);
+    modelMixture(parameters,data);
+
+    // update summary file
+    summary << delta << "\t\t" << iter << "\t\t" << NUM_STABLE_COMPONENTS << endl;
+  }
+  summary.close();
 }
 

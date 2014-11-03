@@ -172,15 +172,53 @@ void Mixture::initialize()
   //srand(time(NULL));
   Vector tmp(N,0);
   responsibility = std::vector<Vector>(K,tmp);
-  /*for (int i=0; i<K; i++) {
-    responsibility.push_back(tmp);
-  }*/
 
-  #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) 
+  //#pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) 
   for (int i=0; i<N; i++) {
     int index = rand() % K;
     responsibility[index][i] = 1;
   }
+  /*for (int i=0; i<N; i++) {
+    for (int j=0; j<K; j++)
+    responsibility[j][i] = uniform_random();
+  }*/
+  /*for (int i=0; i<N; i++) {
+    if (i % 3 == 0) {
+      responsibility[0][i] = 1;
+    } else {
+      int index = rand() % K;
+      responsibility[index][i] = 1;
+    }
+  }*/
+  /*if (K == 2) {
+    for (int i=0; i<N; i++) {
+      responsibility[0][i] = uniform_random();
+      responsibility[1][i] = 1 - responsibility[0][i];
+    }
+  } else {
+    for (int i=0; i<N; i++) {
+      int index = rand() % K;
+      responsibility[index][i] = 1;
+    }
+  }*/
+  /*for (int i=0; i<N; i++) {
+    if (K == 2) {
+      if (i < 0.5 * N) {
+        responsibility[0][i] = 1;
+      } else {
+        responsibility[1][i] = 1;
+      }
+    } else {
+    int index = rand() % K;
+    responsibility[index][i] = 1;}
+  }*/
+  /*for (int i=0; i<N; i++) {
+    Vector w = generateFromSimplex(K);
+    for (int j=0; j<K; j++) {
+      responsibility[j][i] = w[j];
+    }
+  }*/
+  //writeToFile("resp",responsibility,3); exit(1);
   sample_size = Vector(K,0);
   updateEffectiveSampleSize();
   weights = Vector(K,0);
@@ -460,7 +498,7 @@ void Mixture::EM()
       updateResponsibilityMatrix();
       updateEffectiveSampleSize();
       for (int i=0; i<K; i++) {
-        if (sample_size[i] < 1) goto stop;
+        if (sample_size[i] < 5) goto stop;
       }
       // Maximization (M-step)
       updateWeights();
@@ -740,7 +778,33 @@ std::vector<Vector> Mixture::generate(int num_samples, bool save_data)
       sample.push_back(x[j]);
     }
   }
+  //return sample;
+  for (size_t i = 0; i < num_samples; i++) {
+    int idx1 = rand() % num_samples;
+    int idx2 = rand() % num_samples;
+    Vector tmp = sample[idx1];
+    sample[idx1] = sample[idx2];
+    sample[idx2] = tmp; 
+  }
   return sample;
+  // shuffle the sample
+  /*std::vector<Vector> shuffled;
+  std::vector<int> flags(num_samples,0);
+  for (int i=0; i<num_samples; i++) {
+    int index = rand() % num_samples;
+    if (flags[index] == 0) {
+      flags[index] = 1;
+      shuffled.push_back(sample[index]);
+    }
+  }
+  for (int i=0; i<num_samples; i++) {
+    if (flags[i] == 0) {
+      flags[i] = 1;
+      shuffled.push_back(sample[i]);
+    }
+  }
+  assert(shuffled.size() == num_samples);
+  return shuffled;*/
 }
 
 /*!
@@ -858,17 +922,21 @@ Mixture Mixture::kill(int c, ostream &log)
         residual_sums[i] += responsibility[j][i];
       }
     }
-    if (residual_sums[i] < TOLERANCE) residual_sums[i] = TOLERANCE;
+    //if (residual_sums[i] < TOLERANCE) residual_sums[i] = TOLERANCE;
   }
   Vector resp(N,0);
   std::vector<Vector> responsibility_m(K_m,resp);
   index = 0;
   for (int i=0; i<K; i++) {
     if (i != c) {
-      //#pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) private(residual_sum) 
+      #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) //private(residual_sum) 
       for (int j=0; j<N; j++) {
         //residual_sum = 1 - responsibility[c][j];
-        responsibility_m[index][j] = responsibility[i][j] / residual_sums[j];
+        if (residual_sums[j] <= TOLERANCE) {
+          responsibility_m[index][j] = 1.0 / K_m;
+        } else {
+          responsibility_m[index][j] = responsibility[i][j] / residual_sums[j];
+        }
         assert(responsibility_m[index][j] >= 0 && responsibility_m[index][j] <= 1);
       }
       index++;

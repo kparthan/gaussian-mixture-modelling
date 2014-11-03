@@ -1,0 +1,144 @@
+Iteration #1
+Parent:
+	[ 1]	   800.000	   1.00000	[mu]: (5.016, 0.001)		[cov]: ((25.994, -0.173)(-0.173, 0.947))
+	ID: 394
+	MultivariateNormal encoding: 21095.163 bits. (26.369 bits/point)
+
+	SPLIT component 1 ... 
+		Children:
+		[ 1]	   404.000	   0.50499	[mu]: (0.061, 0.038)		[cov]: ((0.977, 0.001)(0.001, 1.024))
+		[ 2]	   396.000	   0.49501	[mu]: (10.070, -0.037)		[cov]: ((0.926, 0.030)(0.030, 0.865))
+		ID: 398
+		MultivariateNormal encoding: 20003.127 bits. (25.004 bits/point)
+
+		Before adjustment ...
+		[ 1]	   404.000	   0.50499	[mu]: (0.061, 0.038)		[cov]: ((0.977, 0.001)(0.001, 1.024))
+		[ 2]	   396.000	   0.49501	[mu]: (10.070, -0.037)		[cov]: ((0.926, 0.030)(0.030, 0.865))
+		ID: 399
+		MultivariateNormal encoding: 20003.127 bits. (25.004 bits/point)
+
+		After adjustment ...
+		[ 1]	   404.000	   0.50499	[mu]: (0.061, 0.038)		[cov]: ((0.977, 0.001)(0.001, 1.024))
+		[ 2]	   396.000	   0.49501	[mu]: (10.070, -0.037)		[cov]: ((0.926, 0.030)(0.030, 0.865))
+		ID: 399
+		MultivariateNormal encoding: 20003.127 bits. (25.004 bits/point)
+
+	 ... IMPROVEMENT ... (+ 5.177 %) 		[ACCEPT]
+
+Iteration #2
+Parent:
+	[ 1]	   404.000	   0.50499	[mu]: (0.061, 0.038)		[cov]: ((0.977, 0.001)(0.001, 1.024))
+	[ 2]	   396.000	   0.49501	[mu]: (10.070, -0.037)		[cov]: ((0.926, 0.030)(0.030, 0.865))
+	ID: 399
+	MultivariateNormal encoding: 20003.127 bits. (25.004 bits/point)
+
+	SPLIT component 1 ... 
+		Children:
+		[ 1]	   795.631	   0.99007	[mu]: (0.061, 0.039)		[cov]: ((0.981, 0.006)(0.006, 1.038))
+		[ 2]	     4.369	   0.00993	[mu]: (0.097, -0.030)		[cov]: ((0.787, -0.276)(-0.276, 0.300))
+		ID: 400
+		MultivariateNormal encoding: 48398.517 bits. (60.498 bits/point)
+
+		Before adjustment ...
+		[ 1]	   399.631	   0.49998	[mu]: (0.061, 0.039)		[cov]: ((0.981, 0.006)(0.006, 1.038))
+		[ 2]	     4.369	   0.00501	[mu]: (0.097, -0.030)		[cov]: ((0.787, -0.276)(-0.276, 0.300))
+		[ 3]	   396.000	   0.49501	[mu]: (10.070, -0.037)		[cov]: ((0.926, 0.030)(0.030, 0.865))
+		ID: 401
+		MultivariateNormal encoding: 20012.490 bits. (25.016 bits/point)
+
+		After adjustment ...
+		[ 1]	   399.631	   0.49998	[mu]: (0.061, 0.039)		[cov]: ((0.981, 0.006)(0.006, 1.038))
+		[ 2]	     4.369	   0.00501	[mu]: (0.097, -0.030)		[cov]: ((0.787, -0.276)(-0.276, 0.300))
+		[ 3]	   396.000	   0.49501	[mu]: (10.070, -0.037)		[cov]: ((0.926, 0.030)(0.030, 0.865))
+		ID: 401
+		MultivariateNormal encoding: 20012.490 bits. (25.016 bits/point)
+
+	 ... NO IMPROVEMENT			[REJECT]
+
+	SPLIT component 2 ... 
+		Children:
+		[ 1]	     2.999	   0.00776	[mu]: (2.882, 0.858)		[cov]: ((0.007, 0.024)(0.024, 0.094))
+		[ 2]	   797.001	   0.99224	[mu]: (10.070, -0.037)		[cov]: ((0.926, 0.030)(0.030, 0.865))
+		ID: 402
+		MultivariateNormal encoding: 50726.450 bits. (63.408 bits/point)
+
+		Before adjustment ...
+		[ 1]	   404.000	   0.50499	[mu]: (0.061, 0.038)		[cov]: ((0.977, 0.001)(0.001, 1.024))
+		[ 2]	     0.000	   0.00384	[mu]: (2.882, 0.858)		[cov]: ((0.007, 0.024)(0.024, 0.094))
+		[ 3]	   396.000	   0.49117	[mu]: (10.070, -0.037)		[cov]: ((0.926, 0.030)(0.030, 0.865))
+		ID: 403
+		MultivariateNormal encoding: 19937.621 bits. (24.922 bits/point)
+
+		After adjustment ...
+		[ 1]	   403.011	   0.50499	[mu]: (0.061, 0.038)		[cov]: ((0.977, 0.001)(0.001, 1.024))
+		[ 2]	     0.989	   0.00384	[mu]: (2.882, 0.858)		[cov]: ((0.007, 0.024)(0.024, 0.094))
+		[ 3]	   396.000	   0.49117	[mu]: (10.070, -0.037)		[cov]: ((0.926, 0.030)(0.030, 0.865))
+		ID: 403
+		MultivariateNormal encoding: 20006.879 bits. (25.009 bits/point)
+
+	 ... NO IMPROVEMENT			[REJECT]
+
+	KILL component 1 ... 
+		Residual:
+		Before adjustment ...
+		[ 1]	   800.000	   1.00000	[mu]: (10.070, -0.037)		[cov]: ((0.926, 0.030)(0.030, 0.865))
+		ID: 404
+		MultivariateNormal encoding: 50773.474 bits. (63.467 bits/point)
+
+		After adjustment ...
+		[ 1]	   800.000	   1.00000	[mu]: (5.016, 0.001)		[cov]: ((25.994, -0.173)(-0.173, 0.947))
+		ID: 404
+		MultivariateNormal encoding: 21095.163 bits. (26.369 bits/point)
+
+	 ... NO IMPROVEMENT			[REJECT]
+
+	KILL component 2 ... 
+		Residual:
+		Before adjustment ...
+		[ 1]	   800.000	   1.00000	[mu]: (0.061, 0.038)		[cov]: ((0.977, 0.001)(0.001, 1.024))
+		ID: 405
+		MultivariateNormal encoding: 48479.229 bits. (60.599 bits/point)
+
+		After adjustment ...
+		[ 1]	   800.000	   1.00000	[mu]: (5.016, 0.001)		[cov]: ((25.994, -0.173)(-0.173, 0.947))
+		ID: 405
+		MultivariateNormal encoding: 21095.163 bits. (26.369 bits/point)
+
+	 ... NO IMPROVEMENT			[REJECT]
+
+	JOIN components 1 and 2 ... 
+		Resultant join:
+		[ 1]	   800.000	   1.00000	[mu]: (5.016, 0.001)		[cov]: ((25.994, -0.173)(-0.173, 0.947))
+		ID: 406
+		MultivariateNormal encoding: 21095.163 bits. (26.369 bits/point)
+
+		Before adjustment ...
+		[ 1]	   800.000	   1.00000	[mu]: (5.016, 0.001)		[cov]: ((25.994, -0.173)(-0.173, 0.947))
+		ID: 407
+		MultivariateNormal encoding: 0.000 bits. (0.000 bits/point)
+
+		After adjustment ...
+		[ 1]	   800.000	   1.00000	[mu]: (5.016, 0.001)		[cov]: ((25.994, -0.173)(-0.173, 0.947))
+		ID: 407
+		MultivariateNormal encoding: 21095.163 bits. (26.369 bits/point)
+
+	 ... NO IMPROVEMENT			[REJECT]
+
+	JOIN components 2 and 1 ... 
+		Resultant join:
+		[ 1]	   800.000	   1.00000	[mu]: (5.016, 0.001)		[cov]: ((25.994, -0.173)(-0.173, 0.947))
+		ID: 408
+		MultivariateNormal encoding: 21095.163 bits. (26.369 bits/point)
+
+		Before adjustment ...
+		[ 1]	   800.000	   1.00000	[mu]: (5.016, 0.001)		[cov]: ((25.994, -0.173)(-0.173, 0.947))
+		ID: 409
+		MultivariateNormal encoding: 0.000 bits. (0.000 bits/point)
+
+		After adjustment ...
+		[ 1]	   800.000	   1.00000	[mu]: (5.016, 0.001)		[cov]: ((25.994, -0.173)(-0.173, 0.947))
+		ID: 409
+		MultivariateNormal encoding: 21095.163 bits. (26.369 bits/point)
+
+	 ... NO IMPROVEMENT			[REJECT]
+
