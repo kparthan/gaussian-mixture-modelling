@@ -174,32 +174,13 @@ void Mixture::initialize()
   responsibility = std::vector<Vector>(K,tmp);
 
   //#pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) 
-  for (int i=0; i<N; i++) {
+  /*for (int i=0; i<N; i++) {
     int index = rand() % K;
     responsibility[index][i] = 1;
-  }
+  }*/
   /*for (int i=0; i<N; i++) {
     for (int j=0; j<K; j++)
     responsibility[j][i] = uniform_random();
-  }*/
-  /*for (int i=0; i<N; i++) {
-    if (i % 3 == 0) {
-      responsibility[0][i] = 1;
-    } else {
-      int index = rand() % K;
-      responsibility[index][i] = 1;
-    }
-  }*/
-  /*if (K == 2) {
-    for (int i=0; i<N; i++) {
-      responsibility[0][i] = uniform_random();
-      responsibility[1][i] = 1 - responsibility[0][i];
-    }
-  } else {
-    for (int i=0; i<N; i++) {
-      int index = rand() % K;
-      responsibility[index][i] = 1;
-    }
   }*/
   /*for (int i=0; i<N; i++) {
     if (K == 2) {
@@ -212,13 +193,101 @@ void Mixture::initialize()
     int index = rand() % K;
     responsibility[index][i] = 1;}
   }*/
-  /*for (int i=0; i<N; i++) {
-    Vector w = generateFromSimplex(K);
+  for (int i=0; i<N; i++) {
+    long double sum = 0;
     for (int j=0; j<K; j++) {
-      responsibility[j][i] = w[j];
+      long double random = uniform_random();
+      responsibility[j][i] = random;
+      sum += random;
     }
-  }*/
+    for (int j=0; j<K; j++) {
+      responsibility[j][i] /= sum;
+    }
+  }
   //writeToFile("resp",responsibility,3); exit(1);
+  sample_size = Vector(K,0);
+  updateEffectiveSampleSize();
+  weights = Vector(K,0);
+  if (ESTIMATION == MML) {
+    updateWeights();
+  } else {
+    updateWeights_ML();
+  }
+
+  // initialize parameters of each component
+  components = std::vector<MultivariateNormal>(K);
+  updateComponents();
+}
+
+void Mixture::initialize2()
+{
+  N = data.size();
+  int D = data[0].size();
+  cout << "Sample size: " << N << endl;
+
+  long double init_weight = 1.0 / K;
+  weights = Vector(K,init_weight);
+
+  // determine covariance of the data
+  Vector global_mean;
+  Matrix global_cov;
+  computeMeanAndCovariance(data,data_weights,global_mean,global_cov);
+  Matrix cov = IdentityMatrix(D,D);
+  for (int i=0; i<D; i++) {
+    cov(i,i) = 0.1 * global_cov(i,i);
+  }
+
+  // choose K random means by choosing K random points
+  std::vector<int> flags(N,0);
+  for (int i=0; i<K; i++) {
+    int index = rand() % N;
+    if (flags[index] == 0) {
+      MultivariateNormal mvnorm(data[index],cov);
+      components.push_back(mvnorm);
+      flags[index] = 1;
+    } else i--;
+  }
+
+  // init sample_size and responsibility variables
+  sample_size = Vector(K,0);
+  Vector tmp(N,0);
+  responsibility = std::vector<Vector>(K,tmp);
+}
+
+void Mixture::initialize3()
+{
+  N = data.size();
+  int D = data[0].size();
+  cout << "Sample size: " << N << endl;
+
+  // choose K random means by choosing K random points
+  std::vector<Vector> init_means(K);
+  std::vector<int> flags(N,0);
+  for (int i=0; i<K; i++) {
+    int index = rand() % N;
+    if (flags[index] == 0) {
+      init_means[i] = data[i];
+      flags[index] = 1;
+    } else i--;
+  }
+
+  Vector tmp(N,0);
+  responsibility = std::vector<Vector>(K,tmp);
+  long double dist,min_dist;
+  int nearest;
+  for (int i=0; i<N; i++) {
+    min_dist = computeEuclideanDistance(init_means[0],data[i]);
+    nearest = 0;
+    for (int j=1; j<K; j++) {
+      dist = computeEuclideanDistance(init_means[j],data[i]);
+      if (dist < min_dist) {
+        min_dist = dist;
+        nearest = j;
+      }
+    } // for j()
+    responsibility[nearest][i] = 1;
+  } // for i()
+
   sample_size = Vector(K,0);
   updateEffectiveSampleSize();
   weights = Vector(K,0);
@@ -248,6 +317,18 @@ void Mixture::updateEffectiveSampleSize()
   }
 }
 
+void Mixture::updateEffectiveSampleSize(int index)
+{
+  //for (int i=0; i<K; i++) {
+    long double count = 0;
+    #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) reduction(+:count)
+    for (int j=0; j<N; j++) {
+      count += responsibility[index][j];
+    }
+    sample_size[index] = count;
+  //}
+}
+
 /*!
  *  \brief This function is used to update the weights of the components.
  */
@@ -259,12 +340,28 @@ void Mixture::updateWeights()
   }
 }
 
+void Mixture::updateWeights(int index)
+{
+  long double normalization_constant = N + (K/2.0);
+  //for (int i=0; i<K; i++) {
+    weights[index] = (sample_size[index] + 0.5) / normalization_constant;
+  //}
+}
+
 void Mixture::updateWeights_ML()
 {
   long double normalization_constant = N;
   for (int i=0; i<K; i++) {
     weights[i] = sample_size[i] / normalization_constant;
   }
+}
+
+void Mixture::updateWeights_ML(int index)
+{
+  long double normalization_constant = N;
+  //for (int i=0; i<K; i++) {
+    weights[index] = sample_size[index] / normalization_constant;
+  //}
 }
 
 /*!
@@ -281,6 +378,19 @@ void Mixture::updateComponents()
     components[i].estimateParameters(data,comp_data_wts);
     //components[i].updateParameters();
   }
+}
+
+void Mixture::updateComponents(int index)
+{
+  Vector comp_data_wts(N,0);
+  //for (int i=0; i<K; i++) {
+    #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) 
+    for (int j=0; j<N; j++) {
+      comp_data_wts[j] = responsibility[index][j] * data_weights[j];
+    }
+    components[index].estimateParameters(data,comp_data_wts);
+    //components[i].updateParameters();
+  //}
 }
 
 /*!
@@ -309,6 +419,32 @@ void Mixture::updateResponsibilityMatrix()
       responsibility[j][i] = probabilities[j] / px;
       assert(!boost::math::isnan(responsibility[j][i]));
     }
+  }
+}
+
+void Mixture::updateResponsibilityMatrix(int index)
+{
+  #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) //private(j)
+  for (int i=0; i<N; i++) {
+    Vector log_densities(K,0);
+    for (int j=0; j<K; j++) {
+      log_densities[j] = components[j].log_density(data[i]);
+    }
+    int max_index = maximumIndex(log_densities);
+    long double max_log_density = log_densities[max_index];
+    for (int j=0; j<K; j++) {
+      log_densities[j] -= max_log_density; 
+    }
+    long double px = 0;
+    Vector probabilities(K,0);
+    for (int j=0; j<K; j++) {
+      probabilities[j] = weights[j] * exp(log_densities[j]);
+      px += probabilities[j];
+    }
+    //for (int j=0; j<K; j++) {
+      responsibility[index][i] = probabilities[index] / px;
+      assert(!boost::math::isnan(responsibility[index][i]));
+    //}
   }
 }
 
@@ -471,7 +607,15 @@ string Mixture::getLogFile()
  */
 long double Mixture::estimateParameters()
 {
-  initialize();
+  //initialize();
+
+  //EM();
+
+  //CEM();
+
+  //initialize2();
+
+  initialize3();
 
   EM();
 
@@ -555,6 +699,82 @@ void Mixture::EM()
   log.close();
 }
 
+void Mixture::CEM()
+{
+  /* prepare log file */
+  string log_file = getLogFile();
+  ofstream log(log_file.c_str());
+
+  long double prev=0,current;
+  int iter = 1,comp;
+  printParameters(log,0,0);
+
+  if (ESTIMATION == MML) {
+    while (1) {
+      comp = iter % K;
+      cout << "comp updated: " << comp << endl;
+      // Expectation (E-step)
+      updateResponsibilityMatrix(comp);
+      updateEffectiveSampleSize(comp);
+      /*for (int i=0; i<K; i++) {
+        if (sample_size[i] < 5) goto stop;
+      }*/
+      // Maximization (M-step)
+      updateWeights(comp);
+      updateComponents(comp);
+      current = computeMinimumMessageLength();
+      if (fabs(current) >= INFINITY) break;
+      msglens.push_back(current);
+      printParameters(log,iter,current);
+      if (iter != 1) {
+        assert(current > 0);
+        // because EM has to consistently produce lower 
+        // message lengths otherwise something wrong!
+        // IMPORTANT: the below condition should not be 
+        //          fabs(prev - current) <= 0.0001 * fabs(prev)
+        // ... it's very hard to satisfy this condition and EM() goes into
+        // ... an infinite loop!
+        if (iter > 10 && (prev - current) <= IMPROVEMENT_RATE * prev) {
+          stop:
+          log << "\nSample size: " << N << endl;
+          log << "encoding rate: " << current/N << " bits/point" << endl;
+          break;
+        }
+      }
+      prev = current;
+      iter++;
+    } 
+  } else if (ESTIMATION == ML) {  // ESTIMATION != MML
+    while (1) {
+      comp = iter % K;
+      cout << "comp updated: " << comp << endl;
+      // Expectation (E-step)
+      updateResponsibilityMatrix(comp);
+      updateEffectiveSampleSize(comp);
+      // Maximization (M-step)
+      updateWeights_ML(comp);
+      updateComponents(comp);
+      //current = negativeLogLikelihood(data);
+      current = computeMinimumMessageLength();
+      msglens.push_back(current);
+      printParameters(log,iter,current);
+      if (iter != 1) {
+        //assert(current > 0);
+        // because EM has to consistently produce lower 
+        // -ve likelihood values otherwise something wrong!
+        if (iter > 10 && (prev - current) <= IMPROVEMENT_RATE * prev) {
+          current = computeMinimumMessageLength();
+          log << "\nSample size: " << N << endl;
+          log << "encoding rate (using ML): " << current/N << " bits/point" << endl;
+          break;
+        }
+      }
+      prev = current;
+      iter++;
+    }
+  }
+  log.close();
+}
 
 /*!
  *  \brief This function returns the minimum message length of this mixture

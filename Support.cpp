@@ -865,6 +865,33 @@ Matrix computeNormalizedDispersionMatrix(std::vector<Vector> &sample)
   return dispersion/sample.size();
 }
 
+void computeMeanAndCovariance(
+  std::vector<Vector> &data, 
+  Vector &weights,
+  Vector &mean, 
+  Matrix &cov
+) {
+  int N = data.size();
+  int D = data[0].size();
+
+  long double Neff;
+  mean = computeVectorSum(data,weights,Neff);
+  for (int i=0; i<D; i++) {
+    mean[i] /= Neff;
+  }
+
+  std::vector<Vector> x_mu(N);
+  Vector diff(D,0);
+  for (int i=0; i<N; i++) {
+    for (int j=0; j<D; j++) {
+      diff[j] = data[i][j] - mean[j];
+    }
+    x_mu[i] = diff;
+  }
+  Matrix S = computeDispersionMatrix(x_mu,weights);
+  cov = S / Neff;
+}
+
 /*!
  *  \brief This function computes the approximation of the constant term for
  *  the constant term in the message length expression (pg. 257 Wallace)
@@ -1153,6 +1180,16 @@ Vector generateRandomUnitVector(int D)
   return unit_vector;
 }
 
+long double computeEuclideanDistance(Vector &p1, Vector &p2)
+{
+  int D = p1.size();
+  long double distsq = 0;
+  for (int i=0; i<D; i++) {
+    distsq += (p1[i] - p2[i]) * (p1[i] - p2[i]);
+  }
+  return sqrt(distsq);
+}
+
 ////////////////////// MIXTURE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 /*!
@@ -1339,7 +1376,7 @@ void modelMixture(struct Parameters &parameters, std::vector<Vector> &data)
       ofstream log(parameters.infer_log.c_str());
       Mixture stable = inferComponents(mixture,data.size(),log);
       NUM_STABLE_COMPONENTS = stable.getNumberOfComponents();
-      //cout << "stable: " << NUM_STABLE_COMPONENTS << endl;
+      cout << "stable: " << NUM_STABLE_COMPONENTS << endl;
       log.close();
     }   
   } else if (parameters.infer_num_components == UNSET) {

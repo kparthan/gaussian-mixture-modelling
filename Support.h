@@ -87,6 +87,7 @@ Vector computeVectorSum(std::vector<Vector> &, Vector &, long double &);
 Vector computeNormalizedVectorSum(std::vector<Vector> &);
 Matrix computeDispersionMatrix(std::vector<Vector> &);
 Matrix computeDispersionMatrix(std::vector<Vector> &, Vector &);
+void computeMeanAndCovariance(std::vector<Vector> &, Vector &, Vector &, Matrix &);
 Matrix computeNormalizedDispersionMatrix(std::vector<Vector> &);
 long double computeConstantTerm(int);
 Matrix computeOrthogonalTransformation(Vector &, Vector &);
@@ -99,6 +100,7 @@ bool invertMatrix(const Matrix &, Matrix &);
 void eigenDecomposition(Matrix, Vector &, Matrix &);
 void jacobiRotateMatrix(Matrix &, Matrix &, int, int);
 Vector generateRandomUnitVector(int);
+long double computeEuclideanDistance(Vector &, Vector &);
 
 // mixture functions
 Vector generateFromSimplex(int);

@@ -82,20 +82,27 @@ class Mixture
 
     //! Initialize parameters
     void initialize();
+    void initialize2();
+    void initialize3();
 
     //! Updates the effective sample size
     void updateEffectiveSampleSize();
+    void updateEffectiveSampleSize(int);
 
     //! Update the component weights
     void updateWeights();
+    void updateWeights(int);
 
     void updateWeights_ML();
+    void updateWeights_ML(int);
 
     //! Update components
     void updateComponents();
+    void updateComponents(int);
 
     //! Update the responsibility matrix
     void updateResponsibilityMatrix();
+    void updateResponsibilityMatrix(int);
 
     //! Computes the responsibility matrix
     void computeResponsibilityMatrix(std::vector<Vector> &, string &);
@@ -123,6 +130,8 @@ class Mixture
 
     //! EM loop
     void EM();
+
+    void CEM();
 
     //! Prints the model parameters
     void printParameters(ostream &, int, long double);
