@@ -14,7 +14,9 @@ int ESTIMATION;
 long double IMPROVEMENT_RATE;
 int NUM_STABLE_COMPONENTS;
 int MAX_ITERATIONS;
+int TOTAL_ITERATIONS = 0;
 UniformRandomNumberGenerator *uniform_generator;
+int IGNORE_SPLIT;
 
 ////////////////////// GENERAL PURPOSE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -1448,9 +1450,10 @@ Mixture inferComponents(Mixture &mixture, int N, ostream &log)
   Mixture modified,improved,parent;
   Vector sample_size;
   //long double min_n = 0.01 * N;
-  long double min_n = 1;
+  long double min_n = 20;
 
   improved = mixture;
+  TOTAL_ITERATIONS = 0;
 
   while (1) {
     parent = improved;
@@ -1463,8 +1466,11 @@ Mixture inferComponents(Mixture &mixture, int N, ostream &log)
     K = components.size();
     for (int i=0; i<K; i++) { // split() ...
       if (sample_size[i] > min_n) {
+        IGNORE_SPLIT = 0;
         modified = parent.split(i,log);
-        updateInference(modified,improved,log,SPLIT);
+        if (IGNORE_SPLIT == 0) {
+          updateInference(modified,improved,log,SPLIT);
+        }
       }
     }
     if (K >= 2) {  // kill() ...

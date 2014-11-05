@@ -8,6 +8,12 @@ extern int ENABLE_DATA_PARALLELISM;
 extern int NUM_THREADS;
 extern long double IMPROVEMENT_RATE;
 extern int ESTIMATION;
+extern int TOTAL_ITERATIONS;
+int SPLITTING = 0;
+extern int IGNORE_SPLIT;
+
+long double IK,IW,IL,sum_IT;
+Vector IT;
 
 /*!
  *  \brief Null constructor module
@@ -495,7 +501,9 @@ long double Mixture::log_probability(Vector &x)
 {
   Vector log_densities(K,0);
   for (int j=0; j<K; j++) {
-      log_densities[j] = components[j].log_density(x);
+    log_densities[j] = components[j].log_density(x);
+    assert(!boost::math::isnan(log_densities[j]));
+    //assert(log_densities[j] < 0);
   }
   int max_index = maximumIndex(log_densities);
   long double max_log_density = log_densities[max_index];
@@ -518,11 +526,16 @@ long double Mixture::log_probability(Vector &x)
 long double Mixture::negativeLogLikelihood(std::vector<Vector> &sample)
 {
   long double value = 0,log_density;
-  #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) private(log_density) reduction(-:value)
+  //#pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) private(log_density) reduction(-:value)
   for (int i=0; i<sample.size(); i++) {
     log_density = log_probability(sample[i]);
+    if(boost::math::isnan(log_density)) {
+      writeToFile("resp",responsibility,3); 
+    }
+    assert(!boost::math::isnan(log_density));
     value -= log_density;
   }
+  //assert(!boost::math::isnan(value));
   return value;
 }
 
@@ -533,6 +546,7 @@ long double Mixture::negativeLogLikelihood(std::vector<Vector> &sample)
  */
 long double Mixture::computeMinimumMessageLength()
 {
+  IT.clear();
   // encode the number of components
   // assume uniform priors
   long double Ik = log(MAX_COMPONENTS);
@@ -546,21 +560,26 @@ long double Mixture::computeMinimumMessageLength()
     Iw -= 0.5 * log(weights[i]);
   }
   cout << "Iw: " << Iw << endl;
-  assert(Iw >= 0);
+  //assert(Iw >= 0);
 
   // encode the likelihood of the sample
   int D = data[0].size();
-  long double Il = negativeLogLikelihood(data);
-  Il -= D * N * log(AOM);
+  long double Il_partial = negativeLogLikelihood(data);
+  long double Il = Il_partial - (D * N * log(AOM));
   cout << "Il: " << Il << endl;
-  assert(Il > 0);
+  //assert(Il > 0);
+  if (Il < 0) {
+    minimum_msglen = LARGE_NUMBER;
+    return minimum_msglen;
+  }
 
   // encode the parameters of the components
   long double It = 0,logp;
-  for (int i=0; i<K; i++) {
+  /*for (int i=0; i<K; i++) {
     logp = components[i].computeLogParametersProbability(sample_size[i]);
+    IT.push_back(logp);
     It += logp;
-  }
+  }*/
   cout << "It: " << It << endl;
   /*if (It <= 0) { cout << It << endl;}
   fflush(stdout);
@@ -576,6 +595,8 @@ long double Mixture::computeMinimumMessageLength()
   part2 = Il + num_free_params/2.0;
   part2 /= log(2);
   part1 = minimum_msglen - part2;
+
+  IK = Ik; IW = Iw; IL = Il; sum_IT = It;
 
   return minimum_msglen;
 }
@@ -607,17 +628,21 @@ string Mixture::getLogFile()
  */
 long double Mixture::estimateParameters()
 {
+  /*if (SPLITTING == 1) {
+    initialize();
+  } else {
+    initialize2();
+  }*/
+
   //initialize();
 
-  //EM();
+  initialize2();
 
-  //CEM();
-
-  //initialize2();
-
-  initialize3();
+  //initialize3();
 
   EM();
+
+  //CEM();
 
   return minimum_msglen;
 }
@@ -641,8 +666,13 @@ void Mixture::EM()
       // Expectation (E-step)
       updateResponsibilityMatrix();
       updateEffectiveSampleSize();
-      for (int i=0; i<K; i++) {
-        if (sample_size[i] < 5) goto stop;
+      if (SPLITTING == 1) {
+        for (int i=0; i<K; i++) {
+          if (sample_size[i] < 20) {
+            current = computeMinimumMessageLength();
+            goto stop;
+          }
+        }
       }
       // Maximization (M-step)
       updateWeights();
@@ -668,6 +698,7 @@ void Mixture::EM()
       }
       prev = current;
       iter++;
+      TOTAL_ITERATIONS++;
     }
   } else if (ESTIMATION == ML) {  // ESTIMATION != MML
     while (1) {
@@ -694,6 +725,7 @@ void Mixture::EM()
       }
       prev = current;
       iter++;
+      TOTAL_ITERATIONS++;
     }
   }
   log.close();
@@ -717,7 +749,10 @@ void Mixture::CEM()
       updateResponsibilityMatrix(comp);
       updateEffectiveSampleSize(comp);
       /*for (int i=0; i<K; i++) {
-        if (sample_size[i] < 5) goto stop;
+        if (sample_size[i] < 20) {
+          current = computeMinimumMessageLength();
+          goto stop;
+        }
       }*/
       // Maximization (M-step)
       updateWeights(comp);
@@ -743,6 +778,7 @@ void Mixture::CEM()
       }
       prev = current;
       iter++;
+      TOTAL_ITERATIONS++;
     } 
   } else if (ESTIMATION == ML) {  // ESTIMATION != MML
     while (1) {
@@ -771,6 +807,7 @@ void Mixture::CEM()
       }
       prev = current;
       iter++;
+      TOTAL_ITERATIONS++;
     }
   }
   log.close();
@@ -1035,6 +1072,7 @@ std::vector<Vector> Mixture::generate(int num_samples, bool save_data)
  */
 Mixture Mixture::split(int c, ostream &log)
 {
+  SPLITTING = 1;
   log << "\tSPLIT component " << c + 1 << " ... " << endl;
 
   int num_children = 2; 
@@ -1066,6 +1104,9 @@ Mixture Mixture::split(int c, ostream &log)
       sum += responsibility_c[i][j];
     }
     sample_size_c[i] = sum;
+    if (sample_size_c[i] < 20) {
+      IGNORE_SPLIT = 1;
+    }
   }
 
   // child components
@@ -1100,10 +1141,19 @@ Mixture Mixture::split(int c, ostream &log)
   log << "\t\tBefore adjustment ...\n";
   merged.computeMinimumMessageLength();
   merged.printParameters(log,2);
-  merged.EM();
-  log << "\t\tAfter adjustment ...\n";
-  merged.computeMinimumMessageLength();
-  merged.printParameters(log,2);
+  if (IGNORE_SPLIT == 1) {
+    log << "\t\tIGNORING SPLIT ...\n";
+  } else {
+    merged.EM();
+    log << "\t\tAfter adjustment ...\n";
+    merged.computeMinimumMessageLength();
+    merged.printParameters(log,2);
+    log << "Ik: " << IK << endl;
+    log << "Iw: " << IW << endl;
+    log << "Il: " << IL << endl;
+    log << "It: " << sum_IT; print(log,IT,3); log << endl;
+  }
+  SPLITTING = 0;
   return merged;
 }
 
@@ -1152,7 +1202,7 @@ Mixture Mixture::kill(int c, ostream &log)
       #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) //private(residual_sum) 
       for (int j=0; j<N; j++) {
         //residual_sum = 1 - responsibility[c][j];
-        if (residual_sums[j] <= TOLERANCE) {
+        if (residual_sums[j] <= 0.06) {
           responsibility_m[index][j] = 1.0 / K_m;
         } else {
           responsibility_m[index][j] = responsibility[i][j] / residual_sums[j];
@@ -1261,6 +1311,7 @@ Mixture Mixture::join(int c1, int c2, ostream &log)
   Vector data_weights_m(N,1);
   Mixture modified(K-1,components_m,weights_m,sample_size_m,responsibility_m,data,data_weights_m);
   log << "\t\tBefore adjustment ...\n";
+  modified.computeMinimumMessageLength();
   modified.printParameters(log,2);
   modified.EM();
   log << "\t\tAfter adjustment ...\n";

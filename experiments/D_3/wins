@@ -1,6 +1,0 @@
-      1000	         negloglikhd	[10 : 0]
-      1000	              msglen	[0 : 10]
-      1000	               kldiv	[5 : 5]
-       100	         negloglikhd	[1000 : 0]
-       100	              msglen	[0 : 1000]
-       100	               kldiv	[771 : 229]

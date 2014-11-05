@@ -15,6 +15,8 @@
 #include <cassert>
 #include <omp.h>
 
+#define BOOST_UBLAS_NDEBUG 1 
+
 #include <boost/program_options.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>

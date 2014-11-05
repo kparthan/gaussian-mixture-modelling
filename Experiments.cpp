@@ -7,6 +7,7 @@ extern int NUM_THREADS;
 extern int ESTIMATION;
 extern long double IMPROVEMENT_RATE;
 extern int NUM_STABLE_COMPONENTS;
+extern int TOTAL_ITERATIONS;
 
 Experiments::Experiments(int iterations) : iterations(iterations)
 {}
@@ -71,9 +72,9 @@ void Experiments::simulate(int D)
 void Experiments::infer_components_exp1()
 {
   int N = 800;
-  long double delta = 2;
+  long double delta = 1.10;
 
-  int D = 2;
+  int D = 10;
   Vector mu1(D,0);
   Vector mu2(D,0); mu2[0] = delta;
   Matrix C1 = IdentityMatrix(D,D);
@@ -106,10 +107,12 @@ void Experiments::infer_components_exp1()
   NUM_THREADS = 1;
   ENABLE_DATA_PARALLELISM = UNSET;
   ESTIMATION = MML;
-  IMPROVEMENT_RATE = 0.00001;
+  IMPROVEMENT_RATE = 0.002;
     
-  string results_folder = "./experiments/infer_components/exp1/";
-  inferExperimentalMixtures(original,delta,results_folder,parameters);
+  string results_folder = "./experiments/infer_components/exp2/";
+  //for (delta=2.4; delta<=2.6; delta+=0.1) {
+    inferExperimentalMixtures(original,delta,results_folder,parameters);
+  //}
 }
 
 void Experiments::inferExperimentalMixtures(
@@ -118,20 +121,30 @@ void Experiments::inferExperimentalMixtures(
   string &results_folder,
   struct Parameters &parameters
 ) {
+  std::ostringstream ss;
+  ss << fixed << setprecision(2);
+  ss << delta;
+  string delta_str = "delta_" + ss.str();
+  //cout << "delta_str: " << delta_str << endl;
+
   string infer_log,summary_log;
-  string delta_str = "delta_" + boost::lexical_cast<string>(delta);
   summary_log = results_folder + "summary/" + delta_str;
   ofstream summary(summary_log.c_str());
+  std::vector<Vector> data;
   for (int iter=1; iter<=iterations; iter++) {
-    infer_log = results_folder + "logs/" + delta_str
-                + "_iter_" + boost::lexical_cast<string>(iter);
+    string iter_str = boost::lexical_cast<string>(iter);
+    infer_log = results_folder + "logs/" + delta_str + "_iter_" + iter_str;
     parameters.infer_log = infer_log;
 
-    std::vector<Vector> data = original.generate(parameters.sample_size,0);
+    //data = original.generate(parameters.sample_size,0);
+    string data_file = "./support/mixturecode2/exp2/data/" + delta_str + "/"
+                       + "mvnorm_iter_" + iter_str + ".dat";
+    data = load_matrix(data_file,parameters.D);
     modelMixture(parameters,data);
 
     // update summary file
-    summary << delta << "\t\t" << iter << "\t\t" << NUM_STABLE_COMPONENTS << endl;
+    summary << "\t\t" << iter << "\t\t" << NUM_STABLE_COMPONENTS << "\t\t" 
+            << TOTAL_ITERATIONS << endl;
   }
   summary.close();
 }
