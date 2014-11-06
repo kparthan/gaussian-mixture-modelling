@@ -11,6 +11,7 @@ extern int ESTIMATION;
 extern int TOTAL_ITERATIONS;
 int SPLITTING = 0;
 extern int IGNORE_SPLIT;
+extern long double MIN_N;
 
 long double IK,IW,IL,sum_IT;
 Vector IT;
@@ -239,10 +240,7 @@ void Mixture::initialize2()
   Matrix global_cov;
   Vector data_weights(N,1);
   computeMeanAndCovariance(data,data_weights,global_mean,global_cov);
-  Matrix cov = IdentityMatrix(D,D);
-  for (int i=0; i<D; i++) {
-    cov(i,i) = 0.1 * global_cov(i,i);
-  }
+  Matrix cov = 0.1 * global_cov;
 
   // choose K random means by choosing K random points
   std::vector<int> flags(N,0);
@@ -259,6 +257,10 @@ void Mixture::initialize2()
   sample_size = Vector(K,0);
   Vector tmp(N,0);
   responsibility = std::vector<Vector>(K,tmp);
+  updateResponsibilityMatrix();
+  updateEffectiveSampleSize();
+  updateWeights();
+  updateComponents();
 }
 
 void Mixture::initialize3()
@@ -405,7 +407,7 @@ void Mixture::updateComponents(int index)
  */
 void Mixture::updateResponsibilityMatrix()
 {
-  //#pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) //private(j)
+  #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) //private(j)
   for (int i=0; i<N; i++) {
     Vector log_densities(K,0);
     for (int j=0; j<K; j++) {
@@ -533,16 +535,14 @@ long double Mixture::log_probability(Vector &x)
 long double Mixture::negativeLogLikelihood(std::vector<Vector> &sample)
 {
   long double value = 0,log_density;
-  //#pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) private(log_density) reduction(-:value)
+  #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) private(log_density) reduction(-:value)
   for (int i=0; i<sample.size(); i++) {
     log_density = log_probability(sample[i]);
     if(boost::math::isnan(log_density)) {
       writeToFile("resp",responsibility,3); 
     }
-    //assert(!boost::math::isnan(log_density));
     value -= log_density;
   }
-  //assert(!boost::math::isnan(value));
   return value;
 }
 
@@ -675,7 +675,7 @@ void Mixture::EM()
       updateEffectiveSampleSize();
       if (SPLITTING == 1) {
         for (int i=0; i<K; i++) {
-          if (sample_size[i] < 20) {
+          if (sample_size[i] < MIN_N) {
             current = computeMinimumMessageLength();
             goto stop;
           }
@@ -1111,7 +1111,7 @@ Mixture Mixture::split(int c, ostream &log)
       sum += responsibility_c[i][j];
     }
     sample_size_c[i] = sum;
-    if (sample_size_c[i] < 30) {
+    if (sample_size_c[i] < MIN_N) {
       IGNORE_SPLIT = 1;
     }
   }
@@ -1149,7 +1149,7 @@ Mixture Mixture::split(int c, ostream &log)
   merged.computeMinimumMessageLength();
   merged.printParameters(log,2);
   if (IGNORE_SPLIT == 1) {
-    log << "\t\tIGNORING SPLIT ...\n";
+    log << "\t\tIGNORING SPLIT ... \n\n";
   } else {
     merged.EM();
     log << "\t\tAfter adjustment ...\n";

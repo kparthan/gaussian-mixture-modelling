@@ -174,6 +174,8 @@ class Mixture
 
     //! Computes the approx KL divergence between two mixtures
     long double computeKLDivergence(Mixture &);
+
+    bool verify(Mixture &);
 };
 
 #endif

@@ -17,6 +17,7 @@ int MAX_ITERATIONS;
 int TOTAL_ITERATIONS = 0;
 UniformRandomNumberGenerator *uniform_generator;
 int IGNORE_SPLIT;
+long double MIN_N;
 
 ////////////////////// GENERAL PURPOSE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -1465,7 +1466,7 @@ Mixture inferComponents(Mixture &mixture, int N, ostream &log)
     sample_size = parent.getSampleSize();
     K = components.size();
     for (int i=0; i<K; i++) { // split() ...
-      if (sample_size[i] > min_n) {
+      if (sample_size[i] > MIN_N) {
         IGNORE_SPLIT = 0;
         modified = parent.split(i,log);
         if (IGNORE_SPLIT == 0) {

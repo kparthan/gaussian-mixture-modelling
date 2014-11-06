@@ -2,9 +2,11 @@
 #include "UniformRandomNumberGenerator.h"
 
 extern UniformRandomNumberGenerator *uniform_generator;
+extern long double MIN_N;
 
 int main(int argc, char **argv)
 {
+  MIN_N = 20;
   srand(time(NULL));
   UniformReal uniform_distribution(0,1);
   RandomNumberGenerator generator;
