@@ -237,6 +237,7 @@ void Mixture::initialize2()
   // determine covariance of the data
   Vector global_mean;
   Matrix global_cov;
+  Vector data_weights(N,1);
   computeMeanAndCovariance(data,data_weights,global_mean,global_cov);
   Matrix cov = IdentityMatrix(D,D);
   for (int i=0; i<D; i++) {
@@ -579,8 +580,8 @@ long double Mixture::computeMinimumMessageLength()
     logp = components[i].computeLogParametersProbability(sample_size[i]);
     IT.push_back(logp);
     It += logp;
-  }*/
-  cout << "It: " << It << endl;
+  }
+  cout << "It: " << It << endl;*/
   /*if (It <= 0) { cout << It << endl;}
   fflush(stdout);
   assert(It > 0);*/
@@ -1104,7 +1105,7 @@ Mixture Mixture::split(int c, ostream &log)
       sum += responsibility_c[i][j];
     }
     sample_size_c[i] = sum;
-    if (sample_size_c[i] < 20) {
+    if (sample_size_c[i] < 10) {
       IGNORE_SPLIT = 1;
     }
   }
@@ -1148,10 +1149,10 @@ Mixture Mixture::split(int c, ostream &log)
     log << "\t\tAfter adjustment ...\n";
     merged.computeMinimumMessageLength();
     merged.printParameters(log,2);
-    log << "Ik: " << IK << endl;
+    /*log << "Ik: " << IK << endl;
     log << "Iw: " << IW << endl;
     log << "Il: " << IL << endl;
-    log << "It: " << sum_IT; print(log,IT,3); log << endl;
+    log << "It: " << sum_IT; print(log,IT,3); log << endl;*/
   }
   SPLITTING = 0;
   return merged;

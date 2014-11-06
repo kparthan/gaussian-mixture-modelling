@@ -1450,7 +1450,7 @@ Mixture inferComponents(Mixture &mixture, int N, ostream &log)
   Mixture modified,improved,parent;
   Vector sample_size;
   //long double min_n = 0.01 * N;
-  long double min_n = 20;
+  long double min_n = 10;
 
   improved = mixture;
   TOTAL_ITERATIONS = 0;
@@ -1505,14 +1505,48 @@ void updateInference(Mixture &modified, Mixture &current, ostream &log, int oper
   long double modified_msglen = modified.getMinimumMessageLength();
   long double current_msglen = current.getMinimumMessageLength();
 
-  if (modified_msglen < current_msglen) {   // ... improvement
+  long double improvement_rate = (current_msglen - modified_msglen) / current_msglen;
+  int accept_flag = 0;
+
+  if (operation == KILL || operation == JOIN) {
+    if (improvement_rate >= 0) {
+      log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
+          << 100 * improvement_rate << " %) ";
+      log << "\t\t[ACCEPT]\n\n";
+      current = modified;
+      accept_flag = 1;
+    } else {
+      /*log << "\t ... IMPROVEMENT < " << fixed << setprecision(3) 
+          << 100 * IMPROVEMENT_RATE << " %\t\t\t[REJECT]\n\n";*/
+      log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
+    }
+  }
+
+  if (operation == SPLIT) {
+    if (improvement_rate > IMPROVEMENT_RATE) {
+      log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
+          << 100 * improvement_rate << " %) ";
+      log << "\t\t[ACCEPT]\n\n";
+      current = modified;
+      accept_flag = 1;
+    } else {
+      log << "\t ... IMPROVEMENT < " << fixed << setprecision(3) 
+          << 100 * IMPROVEMENT_RATE << " %\t\t\t[REJECT]\n\n";
+    }
+  }
+
+  /*if (accept_flag == 0) {
+    log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
+  }*/
+
+  /*if (modified_msglen < current_msglen) {   // ... improvement
     long double improvement_rate = (current_msglen - modified_msglen) / current_msglen;
-    if (operation == JOIN || 
+    if (operation != SPLIT || 
         improvement_rate > IMPROVEMENT_RATE) {  // there is > 0.001 % improvement
       current = modified;
       log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
           << 100 * improvement_rate << " %) ";
-      if (operation == JOIN && improvement_rate < IMPROVEMENT_RATE) {
+      if (operation != SPLIT && improvement_rate < IMPROVEMENT_RATE) {
         log << "\t\t[ACCEPT] with negligible improvement (while joining)!\n\n";
       } else {
         log << "\t\t[ACCEPT]\n\n";
@@ -1523,6 +1557,6 @@ void updateInference(Mixture &modified, Mixture &current, ostream &log, int oper
     }
   } else {    // ... no improvement
     log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
-  }
+  }*/
 }
 

@@ -174,7 +174,7 @@ void MultivariateNormal::estimateCovariance(
 
     case BOTH:
       estimates.cov_ml = S / estimates.Neff;
-      estimates.cov_mml = S / (estimates.Neff + D - 2);
+      estimates.cov_mml = S / (estimates.Neff - 1);
       break;
   }
 }

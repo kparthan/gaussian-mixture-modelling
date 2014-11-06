@@ -72,7 +72,7 @@ void Experiments::simulate(int D)
 void Experiments::infer_components_exp1()
 {
   int N = 800;
-  long double delta = 1.10;
+  long double delta = 1.45;
 
   int D = 10;
   Vector mu1(D,0);
@@ -107,7 +107,7 @@ void Experiments::infer_components_exp1()
   NUM_THREADS = 1;
   ENABLE_DATA_PARALLELISM = UNSET;
   ESTIMATION = MML;
-  IMPROVEMENT_RATE = 0.002;
+  IMPROVEMENT_RATE = 0.0025;
     
   string results_folder = "./experiments/infer_components/exp2/";
   //for (delta=2.4; delta<=2.6; delta+=0.1) {
