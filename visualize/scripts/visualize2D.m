@@ -15,7 +15,7 @@ hold on;
 % plot the sampled data
 for k = 1:K
    %k
-   data_file = strcat('comp',num2str(k),'.dat');
+   data_file = strcat('../sampled_data/comp',num2str(k),'.dat');
    M = load(data_file);
    x = M(:,1);
    y = M(:,2);
