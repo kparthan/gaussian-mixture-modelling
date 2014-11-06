@@ -72,9 +72,9 @@ void Experiments::simulate(int D)
 void Experiments::infer_components_exp1()
 {
   int N = 800;
-  long double delta = 1.45;
+  long double delta = 2.4;
 
-  int D = 10;
+  int D = 2;
   Vector mu1(D,0);
   Vector mu2(D,0); mu2[0] = delta;
   Matrix C1 = IdentityMatrix(D,D);
@@ -107,10 +107,11 @@ void Experiments::infer_components_exp1()
   NUM_THREADS = 1;
   ENABLE_DATA_PARALLELISM = UNSET;
   ESTIMATION = MML;
-  IMPROVEMENT_RATE = 0.0025;
+  //IMPROVEMENT_RATE = 0.001; // for D = 2
+  IMPROVEMENT_RATE = 0.0025; // for D = 10
     
-  string results_folder = "./experiments/infer_components/exp2/";
-  //for (delta=2.4; delta<=2.6; delta+=0.1) {
+  string results_folder = "./experiments/infer_components/exp1/";
+  //for (delta=2.3; delta<=2.6; delta+=0.1) {
     inferExperimentalMixtures(original,delta,results_folder,parameters);
   //}
 }
@@ -122,7 +123,7 @@ void Experiments::inferExperimentalMixtures(
   struct Parameters &parameters
 ) {
   std::ostringstream ss;
-  ss << fixed << setprecision(2);
+  ss << fixed << setprecision(1);
   ss << delta;
   string delta_str = "delta_" + ss.str();
   //cout << "delta_str: " << delta_str << endl;
@@ -137,7 +138,7 @@ void Experiments::inferExperimentalMixtures(
     parameters.infer_log = infer_log;
 
     //data = original.generate(parameters.sample_size,0);
-    string data_file = "./support/mixturecode2/exp2/data/" + delta_str + "/"
+    string data_file = "./support/mixturecode2/exp1/data/" + delta_str + "/"
                        + "mvnorm_iter_" + iter_str + ".dat";
     data = load_matrix(data_file,parameters.D);
     modelMixture(parameters,data);

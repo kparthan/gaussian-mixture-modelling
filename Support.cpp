@@ -1450,7 +1450,7 @@ Mixture inferComponents(Mixture &mixture, int N, ostream &log)
   Mixture modified,improved,parent;
   Vector sample_size;
   //long double min_n = 0.01 * N;
-  long double min_n = 10;
+  long double min_n = 30;
 
   improved = mixture;
   TOTAL_ITERATIONS = 0;
@@ -1508,7 +1508,7 @@ void updateInference(Mixture &modified, Mixture &current, ostream &log, int oper
   long double improvement_rate = (current_msglen - modified_msglen) / current_msglen;
   int accept_flag = 0;
 
-  if (operation == KILL || operation == JOIN) {
+  if (operation == KILL || operation == JOIN || (operation == SPLIT && modified.getNumberOfComponents() == 2)) {
     if (improvement_rate >= 0) {
       log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
           << 100 * improvement_rate << " %) ";
@@ -1520,9 +1520,7 @@ void updateInference(Mixture &modified, Mixture &current, ostream &log, int oper
           << 100 * IMPROVEMENT_RATE << " %\t\t\t[REJECT]\n\n";*/
       log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
     }
-  }
-
-  if (operation == SPLIT) {
+  } else if (operation == SPLIT) {
     if (improvement_rate > IMPROVEMENT_RATE) {
       log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
           << 100 * improvement_rate << " %) ";

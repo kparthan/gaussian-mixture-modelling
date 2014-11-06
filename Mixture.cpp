@@ -405,7 +405,7 @@ void Mixture::updateComponents(int index)
  */
 void Mixture::updateResponsibilityMatrix()
 {
-  #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) //private(j)
+  //#pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) //private(j)
   for (int i=0; i<N; i++) {
     Vector log_densities(K,0);
     for (int j=0; j<K; j++) {
@@ -424,6 +424,12 @@ void Mixture::updateResponsibilityMatrix()
     }
     for (int j=0; j<K; j++) {
       responsibility[j][i] = probabilities[j] / px;
+      if(boost::math::isnan(responsibility[j][i])) {
+        cout << "i: " << i << "; j: " << j << endl;
+        cout << "probs: "; print(cout,probabilities,3); cout << endl;
+        writeToFile("resp",responsibility,3); //exit(1);
+        printParameters(cout,0,0); 
+      }
       assert(!boost::math::isnan(responsibility[j][i]));
     }
   }
@@ -503,7 +509,7 @@ long double Mixture::log_probability(Vector &x)
   Vector log_densities(K,0);
   for (int j=0; j<K; j++) {
     log_densities[j] = components[j].log_density(x);
-    assert(!boost::math::isnan(log_densities[j]));
+    //assert(!boost::math::isnan(log_densities[j]));
     //assert(log_densities[j] < 0);
   }
   int max_index = maximumIndex(log_densities);
@@ -533,7 +539,7 @@ long double Mixture::negativeLogLikelihood(std::vector<Vector> &sample)
     if(boost::math::isnan(log_density)) {
       writeToFile("resp",responsibility,3); 
     }
-    assert(!boost::math::isnan(log_density));
+    //assert(!boost::math::isnan(log_density));
     value -= log_density;
   }
   //assert(!boost::math::isnan(value));
@@ -1105,7 +1111,7 @@ Mixture Mixture::split(int c, ostream &log)
       sum += responsibility_c[i][j];
     }
     sample_size_c[i] = sum;
-    if (sample_size_c[i] < 10) {
+    if (sample_size_c[i] < 30) {
       IGNORE_SPLIT = 1;
     }
   }
