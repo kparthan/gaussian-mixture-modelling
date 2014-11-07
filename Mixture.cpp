@@ -240,8 +240,19 @@ void Mixture::initialize2()
   Matrix global_cov;
   Vector data_weights(N,1);
   computeMeanAndCovariance(data,data_weights,global_mean,global_cov);
-  Matrix cov = 0.1 * global_cov;
+  Vector diag_cov(D,0);
+  for (int i=0; i<D; i++) {
+    diag_cov[i] = 0.1 * global_cov(i,i);
+  }
+  int max_index = maximumIndex(diag_cov);
+  long double max = diag_cov[max_index];
+  Matrix cov = ZeroMatrix(D,D);
+  for (int i=0; i<D; i++) {
+    cov(i,i) = max;
+  }
+  //Matrix cov = 0.1 * global_cov;
 
+  repeat:
   // choose K random means by choosing K random points
   std::vector<int> flags(N,0);
   for (int i=0; i<K; i++) {
@@ -259,6 +270,15 @@ void Mixture::initialize2()
   responsibility = std::vector<Vector>(K,tmp);
   updateResponsibilityMatrix();
   updateEffectiveSampleSize();
+  updateWeights();
+  updateComponents();
+  updateResponsibilityMatrix();
+  updateEffectiveSampleSize();
+  for (int i=0; i<K; i++) {
+    if (sample_size[i] < 1) {
+      goto repeat;
+    }
+  }
   updateWeights();
   updateComponents();
 }
@@ -511,8 +531,8 @@ long double Mixture::log_probability(Vector &x)
   Vector log_densities(K,0);
   for (int j=0; j<K; j++) {
     log_densities[j] = components[j].log_density(x);
-    //assert(!boost::math::isnan(log_densities[j]));
-    //assert(log_densities[j] < 0);
+    assert(!boost::math::isnan(log_densities[j]));
+    assert(log_densities[j] < 0);
   }
   int max_index = maximumIndex(log_densities);
   long double max_log_density = log_densities[max_index];
@@ -643,7 +663,7 @@ long double Mixture::estimateParameters()
 
   //initialize();
 
-  initialize2();
+  //initialize2();
 
   //initialize3();
 
@@ -668,7 +688,7 @@ void Mixture::EM()
   printParameters(log,0,0);
 
   /* EM loop */
-  if (ESTIMATION == MML) {
+  //if (ESTIMATION == MML) {
     while (1) {
       // Expectation (E-step)
       updateResponsibilityMatrix();
@@ -696,7 +716,8 @@ void Mixture::EM()
         //          fabs(prev - current) <= 0.0001 * fabs(prev)
         // ... it's very hard to satisfy this condition and EM() goes into
         // ... an infinite loop!
-        if (iter > 10 && (prev - current) <= IMPROVEMENT_RATE * prev) {
+        if ((iter > 10 && (prev - current) <= IMPROVEMENT_RATE * prev) ||
+              (iter > 1 && current > prev)) {
           stop:
           log << "\nSample size: " << N << endl;
           log << "encoding rate: " << current/N << " bits/point" << endl;
@@ -707,34 +728,7 @@ void Mixture::EM()
       iter++;
       TOTAL_ITERATIONS++;
     }
-  } else if (ESTIMATION == ML) {  // ESTIMATION != MML
-    while (1) {
-      // Expectation (E-step)
-      updateResponsibilityMatrix();
-      updateEffectiveSampleSize();
-      // Maximization (M-step)
-      updateWeights_ML();
-      updateComponents();
-      //current = negativeLogLikelihood(data);
-      current = computeMinimumMessageLength();
-      msglens.push_back(current);
-      printParameters(log,iter,current);
-      if (iter != 1) {
-        //assert(current > 0);
-        // because EM has to consistently produce lower 
-        // -ve likelihood values otherwise something wrong!
-        if (iter > 10 && (prev - current) <= IMPROVEMENT_RATE * prev) {
-          current = computeMinimumMessageLength();
-          log << "\nSample size: " << N << endl;
-          log << "encoding rate (using ML): " << current/N << " bits/point" << endl;
-          break;
-        }
-      }
-      prev = current;
-      iter++;
-      TOTAL_ITERATIONS++;
-    }
-  }
+  //}
   log.close();
 }
 

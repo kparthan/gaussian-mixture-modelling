@@ -23,7 +23,7 @@ void MultivariateNormal::updateConstants()
   D = mu.size();
   cov_inv = ZeroMatrix(D,D);
   invertMatrix(cov,cov_inv,det_cov);
-  if (det_cov < 0) {
+  /*if (det_cov < 0) {
     cout << "cov: " << cov << endl;
     cout << "inverse: " << cov_inv << endl;
     cout << "det_cov: " << det_cov << endl;
@@ -32,7 +32,16 @@ void MultivariateNormal::updateConstants()
     }
   }
   //assert(det_cov > 0);
-  det_cov = fabs(det_cov);
+  det_cov = fabs(det_cov);*/
+
+  long double MIN_SIGMA = AOM;
+  if (det_cov < 0 || fabs(det_cov) < 1e-12) {
+    long double min_var = MIN_SIGMA * MIN_SIGMA;
+    Matrix I = IdentityMatrix(D,D);
+    cov = min_var * I;
+    cov_inv = I / min_var;
+    det_cov = min_var * min_var;
+  }
 
   log_cd = computeLogNormalizationConstant();
 }
