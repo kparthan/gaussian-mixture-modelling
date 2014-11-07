@@ -97,11 +97,11 @@ class Mixture
     void updateWeights_ML(int);
 
     //! Update components
-    void updateComponents();
+    int updateComponents();
     void updateComponents(int);
 
     //! Update the responsibility matrix
-    void updateResponsibilityMatrix();
+    int updateResponsibilityMatrix();
     void updateResponsibilityMatrix(int);
 
     //! Computes the responsibility matrix

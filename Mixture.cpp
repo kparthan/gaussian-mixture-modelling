@@ -252,6 +252,7 @@ void Mixture::initialize2()
   }
   //Matrix cov = 0.1 * global_cov;
 
+  int trials=0,max_trials = 5;
   repeat:
   // choose K random means by choosing K random points
   std::vector<int> flags(N,0);
@@ -268,19 +269,40 @@ void Mixture::initialize2()
   sample_size = Vector(K,0);
   Vector tmp(N,0);
   responsibility = std::vector<Vector>(K,tmp);
-  updateResponsibilityMatrix();
-  updateEffectiveSampleSize();
-  updateWeights();
-  updateComponents();
-  updateResponsibilityMatrix();
-  updateEffectiveSampleSize();
-  for (int i=0; i<K; i++) {
-    if (sample_size[i] < 1) {
-      goto repeat;
+  int success = updateResponsibilityMatrix();
+  if (success == 0) {
+    if (++trials <= max_trials) goto repeat;
+    else {
+      initialize(); sleep(5);
+      return;
     }
   }
+  updateEffectiveSampleSize();
   updateWeights();
-  updateComponents();
+  success = updateComponents();
+  if (success == 0) {
+    if (++trials <= max_trials) goto repeat;
+    else {
+      initialize(); sleep(5);
+      return;
+    }
+  }
+  success = updateResponsibilityMatrix();
+  if (success == 0) {
+    if (++trials <= max_trials) goto repeat;
+    else {
+      initialize(); sleep(5);
+      return;
+    }
+  }
+  updateEffectiveSampleSize();
+  for (int i=0; i<K; i++) {
+    if (sample_size[i] < 5) {
+      cout << "... initialize2 failed ...\n"; sleep(5);
+      initialize();
+      return;
+    }
+  }
 }
 
 void Mixture::initialize3()
@@ -396,7 +418,7 @@ void Mixture::updateWeights_ML(int index)
 /*!
  *  \brief This function is used to update the components.
  */
-void Mixture::updateComponents()
+int Mixture::updateComponents()
 {
   Vector comp_data_wts(N,0);
   for (int i=0; i<K; i++) {
@@ -406,7 +428,14 @@ void Mixture::updateComponents()
     }
     components[i].estimateParameters(data,comp_data_wts);
     //components[i].updateParameters();
+    Matrix cov = components[i].Covariance();
+    for (int i=0; i<data[0].size(); i++) {
+      if (cov(i,i) <= 0) {
+        return 0;
+      }
+    }
   }
+  return 1;
 }
 
 void Mixture::updateComponents(int index)
@@ -425,13 +454,15 @@ void Mixture::updateComponents(int index)
 /*!
  *  \brief This function updates the terms in the responsibility matrix.
  */
-void Mixture::updateResponsibilityMatrix()
+int Mixture::updateResponsibilityMatrix()
 {
-  #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) //private(j)
+  //#pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) //private(j)
   for (int i=0; i<N; i++) {
     Vector log_densities(K,0);
     for (int j=0; j<K; j++) {
       log_densities[j] = components[j].log_density(data[i]);
+      if (boost::math::isnan(log_densities[j]) ||
+          fabs(log_densities[j]) >= INFINITY) return 0;
     }
     int max_index = maximumIndex(log_densities);
     long double max_log_density = log_densities[max_index];
@@ -452,9 +483,11 @@ void Mixture::updateResponsibilityMatrix()
         writeToFile("resp",responsibility,3); //exit(1);
         printParameters(cout,0,0); 
       }
-      assert(!boost::math::isnan(responsibility[j][i]));
+      //assert(!boost::math::isnan(responsibility[j][i]));
+      if (boost::math::isnan(responsibility[j][i])) return 0;
     }
   }
+  return 1;
 }
 
 void Mixture::updateResponsibilityMatrix(int index)
@@ -532,7 +565,7 @@ long double Mixture::log_probability(Vector &x)
   for (int j=0; j<K; j++) {
     log_densities[j] = components[j].log_density(x);
     assert(!boost::math::isnan(log_densities[j]));
-    assert(log_densities[j] < 0);
+    //assert(log_densities[j] < 0);
   }
   int max_index = maximumIndex(log_densities);
   long double max_log_density = log_densities[max_index];
@@ -663,7 +696,7 @@ long double Mixture::estimateParameters()
 
   //initialize();
 
-  //initialize2();
+  initialize2();
 
   //initialize3();
 

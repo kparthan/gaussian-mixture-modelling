@@ -34,14 +34,19 @@ void MultivariateNormal::updateConstants()
   //assert(det_cov > 0);
   det_cov = fabs(det_cov);*/
 
-  long double MIN_SIGMA = AOM;
+  /*long double MIN_SIGMA = AOM;
   if (det_cov < 0 || fabs(det_cov) < 1e-12) {
     long double min_var = MIN_SIGMA * MIN_SIGMA;
     Matrix I = IdentityMatrix(D,D);
     cov = min_var * I;
     cov_inv = I / min_var;
     det_cov = min_var * min_var;
+  }*/
+  /*if (det_cov < 0) {
+    cout << "cov: " << cov << endl;
+    cout << "det_cov: " << det_cov << endl;
   }
+  assert(det_cov > 0);*/
 
   log_cd = computeLogNormalizationConstant();
 }
@@ -242,7 +247,7 @@ long double MultivariateNormal::log_density(Vector &x)
     diff[i] = x[i] - mu[i];
   }
   log_pdf -= (0.5 * prod_vMv(diff,cov_inv));
-  assert(!boost::math::isnan(log_pdf));
+  //assert(!boost::math::isnan(log_pdf));
   return log_pdf;
 }
 
