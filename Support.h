@@ -111,7 +111,7 @@ bool gatherData(struct Parameters &, std::vector<Vector> &);
 void modelOneComponent(struct Parameters &, std::vector<Vector> &);
 void modelMixture(struct Parameters &, std::vector<Vector> &);
 void simulateMixtureModel(struct Parameters &);
-Mixture inferComponents(Mixture &, int, ostream &);
+Mixture inferComponents(Mixture &, int, int, ostream &);
 void updateInference(Mixture &, Mixture &, ostream &, int);
 
 #endif

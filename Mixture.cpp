@@ -238,7 +238,7 @@ void Mixture::initialize2()
   // determine covariance of the data
   Vector global_mean;
   Matrix global_cov;
-  Vector data_weights(N,1);
+  //Vector data_weights(N,1);
   computeMeanAndCovariance(data,data_weights,global_mean,global_cov);
   Vector diag_cov(D,0);
   for (int i=0; i<D; i++) {
@@ -273,7 +273,7 @@ void Mixture::initialize2()
   if (success == 0) {
     if (++trials <= max_trials) goto repeat;
     else {
-      initialize(); sleep(5);
+      initialize(); //sleep(5);
       return;
     }
   }
@@ -283,7 +283,7 @@ void Mixture::initialize2()
   if (success == 0) {
     if (++trials <= max_trials) goto repeat;
     else {
-      initialize(); sleep(5);
+      initialize(); //sleep(5);
       return;
     }
   }
@@ -291,14 +291,14 @@ void Mixture::initialize2()
   if (success == 0) {
     if (++trials <= max_trials) goto repeat;
     else {
-      initialize(); sleep(5);
+      initialize(); //sleep(5);
       return;
     }
   }
   updateEffectiveSampleSize();
   for (int i=0; i<K; i++) {
     if (sample_size[i] < 5) {
-      cout << "... initialize2 failed ...\n"; sleep(5);
+      cout << "... initialize2 failed ...\n";// sleep(5);
       initialize();
       return;
     }
@@ -564,8 +564,7 @@ long double Mixture::log_probability(Vector &x)
   Vector log_densities(K,0);
   for (int j=0; j<K; j++) {
     log_densities[j] = components[j].log_density(x);
-    assert(!boost::math::isnan(log_densities[j]));
-    //assert(log_densities[j] < 0);
+    //assert(!boost::math::isnan(log_densities[j]));
   }
   int max_index = maximumIndex(log_densities);
   long double max_log_density = log_densities[max_index];
@@ -628,7 +627,7 @@ long double Mixture::computeMinimumMessageLength()
   long double Il = Il_partial - (D * N * log(AOM));
   cout << "Il: " << Il << endl;
   //assert(Il > 0);
-  if (Il < 0) {
+  if (Il < 0 || boost::math::isnan(Il)) {
     minimum_msglen = LARGE_NUMBER;
     return minimum_msglen;
   }
@@ -726,14 +725,14 @@ void Mixture::EM()
       // Expectation (E-step)
       updateResponsibilityMatrix();
       updateEffectiveSampleSize();
-      if (SPLITTING == 1) {
+      //if (SPLITTING == 1) {
         for (int i=0; i<K; i++) {
           if (sample_size[i] < MIN_N) {
             current = computeMinimumMessageLength();
             goto stop;
           }
         }
-      }
+      //}
       // Maximization (M-step)
       updateWeights();
       updateComponents();
@@ -742,15 +741,15 @@ void Mixture::EM()
       msglens.push_back(current);
       printParameters(log,iter,current);
       if (iter != 1) {
-        assert(current > 0);
+        //assert(current > 0);
         // because EM has to consistently produce lower 
         // message lengths otherwise something wrong!
         // IMPORTANT: the below condition should not be 
         //          fabs(prev - current) <= 0.0001 * fabs(prev)
         // ... it's very hard to satisfy this condition and EM() goes into
         // ... an infinite loop!
-        if ((iter > 10 && (prev - current) <= IMPROVEMENT_RATE * prev) ||
-              (iter > 1 && current > prev)) {
+        if ((iter > 3 && (prev - current) <= IMPROVEMENT_RATE * prev) ||
+              (iter > 1 && current > prev) || current <= 0) {
           stop:
           log << "\nSample size: " << N << endl;
           log << "encoding rate: " << current/N << " bits/point" << endl;
@@ -1070,13 +1069,14 @@ std::vector<Vector> Mixture::generate(int num_samples, bool save_data)
     }
   }
   //return sample;
-  for (size_t i = 0; i < num_samples; i++) {
+  /*for (size_t i = 0; i < num_samples; i++) {
     int idx1 = rand() % num_samples;
     int idx2 = rand() % num_samples;
     Vector tmp = sample[idx1];
     sample[idx1] = sample[idx2];
     sample[idx2] = tmp; 
-  }
+  }*/
+  writeToFile("random_sample.dat",sample,5);
   return sample;
   // shuffle the sample
   /*std::vector<Vector> shuffled;

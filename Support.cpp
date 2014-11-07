@@ -1377,7 +1377,7 @@ void modelMixture(struct Parameters &parameters, std::vector<Vector> &data)
         mixture.load(parameters.mixture_file,parameters.D,data,data_weights);
       } // continue_inference
       ofstream log(parameters.infer_log.c_str());
-      Mixture stable = inferComponents(mixture,data.size(),log);
+      Mixture stable = inferComponents(mixture,data.size(),data[0].size(),log);
       NUM_STABLE_COMPONENTS = stable.getNumberOfComponents();
       cout << "stable: " << NUM_STABLE_COMPONENTS << endl;
       log.close();
@@ -1444,28 +1444,45 @@ void simulateMixtureModel(struct Parameters &parameters)
  *  \param N an integer
  *  \param log a reference to a ostream 
  */
-Mixture inferComponents(Mixture &mixture, int N, ostream &log)
+Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
 {
   int K,iter = 0;
   std::vector<MultivariateNormal> components;
   Mixture modified,improved,parent;
   Vector sample_size;
-  //long double min_n = 0.01 * N;
-  long double min_n = 30;
+
+  if (D >= 10) {
+    MIN_N = 5 * (D + 3);
+  } else {
+    MIN_N = D + 3;
+  }
 
   improved = mixture;
   TOTAL_ITERATIONS = 0;
 
+  if (D <= 5) {
+    IMPROVEMENT_RATE = 0.001;
+  } else {
+    IMPROVEMENT_RATE = 0.005;
+  }
   while (1) {
     parent = improved;
     iter++;
+    if (parent.getNumberOfComponents() >= 2 && D < 5) IMPROVEMENT_RATE = 0.0005;
+    if (parent.getNumberOfComponents() >= 10 && D < 5) IMPROVEMENT_RATE = 0.0025;
+    if (parent.getNumberOfComponents() >= 15 && D < 5) IMPROVEMENT_RATE = 0.001;
+    if (parent.getNumberOfComponents() >= 3 && D >= 5) IMPROVEMENT_RATE = 0.0025;
+    if (parent.getNumberOfComponents() >= 10 && D >= 5) IMPROVEMENT_RATE = 0.001;
+    if (parent.getNumberOfComponents() >= 2 && D >= 10) IMPROVEMENT_RATE = 0.0025;
+    if (parent.getNumberOfComponents() >= 5 && D >= 10) IMPROVEMENT_RATE = 0.0001;
+    if (parent.getNumberOfComponents() >= 10 && D >= 10) IMPROVEMENT_RATE = 0.001;
     log << "Iteration #" << iter << endl;
     log << "Parent:\n";
     parent.printParameters(log,1);
     components = parent.getComponents();
     sample_size = parent.getSampleSize();
     K = components.size();
-    for (int i=0; i<K; i++) { // split() ...
+    /*for (int i=0; i<K; i++) { // split() ...
       if (sample_size[i] > MIN_N) {
         IGNORE_SPLIT = 0;
         modified = parent.split(i,log);
@@ -1473,7 +1490,7 @@ Mixture inferComponents(Mixture &mixture, int N, ostream &log)
           updateInference(modified,improved,log,SPLIT);
         }
       }
-    }
+    }*/
     if (K >= 2) {  // kill() ...
       for (int i=0; i<K; i++) {
         modified = parent.kill(i,log);
@@ -1487,6 +1504,17 @@ Mixture inferComponents(Mixture &mixture, int N, ostream &log)
         updateInference(modified,improved,log,JOIN);
       } // join() ing nearest components
     } // if (K > 1) loop
+    if (improved == parent) {
+      for (int i=0; i<K; i++) { // split() ...
+        if (sample_size[i] > MIN_N) {
+          IGNORE_SPLIT = 0;
+          modified = parent.split(i,log);
+          if (IGNORE_SPLIT == 0) {
+            updateInference(modified,improved,log,SPLIT);
+          }
+        }
+      } // for()
+    }
     if (improved == parent) goto finish;
   } // if (improved == parent || iter%2 == 0) loop
 
@@ -1509,7 +1537,7 @@ void updateInference(Mixture &modified, Mixture &current, ostream &log, int oper
   long double improvement_rate = (current_msglen - modified_msglen) / current_msglen;
   int accept_flag = 0;
 
-  if (operation == KILL || operation == JOIN || (operation == SPLIT && modified.getNumberOfComponents() == 2)) {
+  if (operation == KILL || operation == JOIN /*|| (operation == SPLIT && modified.getNumberOfComponents() == 2)*/) {
     if (improvement_rate >= 0) {
       log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
           << 100 * improvement_rate << " %) ";

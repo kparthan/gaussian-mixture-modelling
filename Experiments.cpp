@@ -107,8 +107,7 @@ void Experiments::infer_components_exp1()
   NUM_THREADS = 1;
   ENABLE_DATA_PARALLELISM = UNSET;
   ESTIMATION = MML;
-  IMPROVEMENT_RATE = 0.005; // for D = 2
-  //IMPROVEMENT_RATE = 0.0025; // for D = 10
+  IMPROVEMENT_RATE = 0.005; 
     
   string results_folder = "./experiments/infer_components/exp2/";
   //for (delta=2.0; delta<=2.6; delta+=0.1) {
