@@ -218,6 +218,18 @@ void writeToFile(const char *file_name, std::vector<Vector> &v, int precision)
   file.close(); 
 }
 
+void writeToFile(const char *file_name, std::vector<Vector> &v)
+{
+  ofstream file(file_name);
+  for (int i=0; i<v.size(); i++) {
+    for (int j=0; j<v[i].size(); j++) {
+      file << setw(15) << scientific << v[i][j];
+    }
+    file << endl;
+  }
+  file.close(); 
+}
+
 /*!
  *  \brief This module extracts the file name from the path
  *  \param file a reference to a string
@@ -1376,11 +1388,42 @@ void modelMixture(struct Parameters &parameters, std::vector<Vector> &data)
       } else if (parameters.continue_inference == SET) {
         mixture.load(parameters.mixture_file,parameters.D,data,data_weights);
       } // continue_inference
-      ofstream log(parameters.infer_log.c_str());
-      Mixture stable = inferComponents(mixture,data.size(),data[0].size(),log);
-      NUM_STABLE_COMPONENTS = stable.getNumberOfComponents();
-      cout << "stable: " << NUM_STABLE_COMPONENTS << endl;
-      log.close();
+      int NUM_ATTEMPTS = 3;
+      string log_file;
+      ofstream summary("inference_summary");
+      std::vector<Mixture> stable_mixtures;
+      Mixture stable,starting;
+      long double minimum_msglen,current_msglen;
+      int min_index;
+      for (int i=0; i<NUM_ATTEMPTS; i++) {
+        log_file = parameters.infer_log + "_attempt_" + boost::lexical_cast<string>(i+1);
+        ofstream log(log_file.c_str());
+        if (i == 0) {
+          starting = mixture;
+        } else if (stable.getNumberOfComponents() > starting.getNumberOfComponents()) {
+          starting = stable;
+        }
+        stable = inferComponents(starting,data.size(),data[0].size(),log);
+        if (i == 0) {
+          minimum_msglen = stable.getMinimumMessageLength();
+          min_index = 0;
+        } else {
+          //stable = inferComponents(stable_mixtures[i-1],data.size(),data[0].size(),log);
+          current_msglen = stable.getMinimumMessageLength(); 
+          if (current_msglen < minimum_msglen) {
+            minimum_msglen = current_msglen;
+            min_index = i;
+          }
+        }
+        log.close();
+        NUM_STABLE_COMPONENTS = stable.getNumberOfComponents();
+        stable_mixtures.push_back(stable);
+        summary << "stable mixture [" << i << "] : " << NUM_STABLE_COMPONENTS << endl;
+        stable.printParameters(summary,2);
+      }
+      summary << "\n\nBest mixture: \n";
+      stable_mixtures[min_index].printParameters(summary,2);
+      summary.close();
     }   
   } else if (parameters.infer_num_components == UNSET) {
     // for a given value of number of components
@@ -1452,7 +1495,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
   Vector sample_size;
 
   if (D >= 10) {
-    MIN_N = 5 * (D + 3);
+    MIN_N = 2 * (D + 3);
   } else {
     MIN_N = D + 3;
   }
@@ -1468,14 +1511,14 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
   while (1) {
     parent = improved;
     iter++;
-    if (parent.getNumberOfComponents() >= 2 && D < 5) IMPROVEMENT_RATE = 0.0005;
+    /*if (parent.getNumberOfComponents() >= 2 && D < 5) IMPROVEMENT_RATE = 0.0005;
     if (parent.getNumberOfComponents() >= 10 && D < 5) IMPROVEMENT_RATE = 0.0025;
     if (parent.getNumberOfComponents() >= 15 && D < 5) IMPROVEMENT_RATE = 0.001;
     if (parent.getNumberOfComponents() >= 3 && D >= 5) IMPROVEMENT_RATE = 0.0025;
     if (parent.getNumberOfComponents() >= 10 && D >= 5) IMPROVEMENT_RATE = 0.001;
     if (parent.getNumberOfComponents() >= 2 && D >= 10) IMPROVEMENT_RATE = 0.0025;
     if (parent.getNumberOfComponents() >= 5 && D >= 10) IMPROVEMENT_RATE = 0.0001;
-    if (parent.getNumberOfComponents() >= 10 && D >= 10) IMPROVEMENT_RATE = 0.001;
+    if (parent.getNumberOfComponents() >= 10 && D >= 10) IMPROVEMENT_RATE = 0.001;*/
     log << "Iteration #" << iter << endl;
     log << "Parent:\n";
     parent.printParameters(log,1);
@@ -1538,6 +1581,7 @@ void updateInference(Mixture &modified, Mixture &current, ostream &log, int oper
   int accept_flag = 0;
 
   if (operation == KILL || operation == JOIN /*|| (operation == SPLIT && modified.getNumberOfComponents() == 2)*/) {
+    //if (improvement_rate >= -IMPROVEMENT_RATE) {
     if (improvement_rate >= 0) {
       log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
           << 100 * improvement_rate << " %) ";

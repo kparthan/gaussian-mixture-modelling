@@ -1076,7 +1076,7 @@ std::vector<Vector> Mixture::generate(int num_samples, bool save_data)
     sample[idx1] = sample[idx2];
     sample[idx2] = tmp; 
   }*/
-  writeToFile("random_sample.dat",sample,5);
+  writeToFile("random_sample.dat",sample);
   return sample;
   // shuffle the sample
   /*std::vector<Vector> shuffled;
