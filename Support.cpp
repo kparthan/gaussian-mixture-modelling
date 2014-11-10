@@ -19,6 +19,7 @@ UniformRandomNumberGenerator *uniform_generator;
 int IGNORE_SPLIT;
 long double MIN_N;
 int STRATEGY;
+int MSGLEN_FAIL;
 
 ////////////////////// GENERAL PURPOSE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 

@@ -12,6 +12,7 @@ extern int TOTAL_ITERATIONS;
 int SPLITTING = 0;
 extern int IGNORE_SPLIT;
 extern long double MIN_N;
+extern int MSGLEN_FAIL;
 
 long double IK,IW,IL,sum_IT;
 Vector IT;
@@ -605,6 +606,7 @@ long double Mixture::negativeLogLikelihood(std::vector<Vector> &sample)
  */
 long double Mixture::computeMinimumMessageLength()
 {
+  MSGLEN_FAIL = 0;
   IT.clear();
   // encode the number of components
   // assume uniform priors
@@ -630,6 +632,7 @@ long double Mixture::computeMinimumMessageLength()
   //assert(Il > 0);
   if (Il < 0 || boost::math::isnan(Il)) {
     minimum_msglen = LARGE_NUMBER;
+    MSGLEN_FAIL = 1;
     return minimum_msglen;
   }
 
@@ -750,7 +753,7 @@ void Mixture::EM()
         // ... it's very hard to satisfy this condition and EM() goes into
         // ... an infinite loop!
         if ((iter > 3 && (prev - current) <= IMPROVEMENT_RATE * prev) ||
-              (iter > 1 && current > prev) || current <= 0) {
+              (iter > 1 && current > prev) || current <= 0 || MSGLEN_FAIL == 1) {
           stop:
           log << "\nSample size: " << N << endl;
           log << "encoding rate: " << current/N << " bits/point" << endl;
