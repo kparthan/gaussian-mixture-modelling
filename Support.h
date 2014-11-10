@@ -89,6 +89,7 @@ Vector computeNormalizedVectorSum(std::vector<Vector> &);
 Matrix computeDispersionMatrix(std::vector<Vector> &);
 Matrix computeDispersionMatrix(std::vector<Vector> &, Vector &);
 void computeMeanAndCovariance(std::vector<Vector> &, Vector &, Vector &, Matrix &);
+Matrix computeCovariance(std::vector<Vector> &, Vector &, Vector &);
 Matrix computeNormalizedDispersionMatrix(std::vector<Vector> &);
 long double computeConstantTerm(int);
 Matrix computeOrthogonalTransformation(Vector &, Vector &);

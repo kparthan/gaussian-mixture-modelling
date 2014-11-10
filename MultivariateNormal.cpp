@@ -23,16 +23,16 @@ void MultivariateNormal::updateConstants()
   D = mu.size();
   cov_inv = ZeroMatrix(D,D);
   invertMatrix(cov,cov_inv,det_cov);
-  /*if (det_cov < 0) {
+  if (det_cov < 0) {
     cout << "cov: " << cov << endl;
     cout << "inverse: " << cov_inv << endl;
     cout << "det_cov: " << det_cov << endl;
-    if (fabs(det_cov) < 1e-6) {
+    /*if (fabs(det_cov) < 1e-6) {
       det_cov = fabs(det_cov);
-    }
+    }*/
   }
-  //assert(det_cov > 0);
-  det_cov = fabs(det_cov);*/
+  assert(det_cov > 0);
+  //det_cov = fabs(det_cov);
 
   /*long double MIN_SIGMA = AOM;
   if (det_cov < 0 || fabs(det_cov) < 1e-12) {
@@ -247,7 +247,7 @@ long double MultivariateNormal::log_density(Vector &x)
     diff[i] = x[i] - mu[i];
   }
   log_pdf -= (0.5 * prod_vMv(diff,cov_inv));
-  //assert(!boost::math::isnan(log_pdf));
+  assert(!boost::math::isnan(log_pdf));
   return log_pdf;
 }
 

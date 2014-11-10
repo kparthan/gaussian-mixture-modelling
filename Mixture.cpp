@@ -14,7 +14,7 @@ extern int IGNORE_SPLIT;
 extern long double MIN_N;
 extern int MSGLEN_FAIL;
 
-long double IK,IW,IL,sum_IT;
+long double IK,IW,IL,sum_IT,PART1,PART2,CD;
 Vector IT;
 
 /*!
@@ -312,6 +312,8 @@ void Mixture::initialize3()
   int D = data[0].size();
   cout << "Sample size: " << N << endl;
 
+  int trials=0,max_trials = 5;
+  repeat:
   // choose K random means by choosing K random points
   std::vector<Vector> init_means(K);
   std::vector<int> flags(N,0);
@@ -322,36 +324,85 @@ void Mixture::initialize3()
       flags[index] = 1;
     } else i--;
   }
-
+  /*for (int i=0; i<K; i++) {
+    int max_index = maximumIndex(da)
+    int index = rand() % N;
+    if (flags[index] == 0) {
+      init_means[i] = data[i];
+      flags[index] = 1;
+    } else i--;
+  }*/
+  // initialize memberships (hard)
   Vector tmp(N,0);
   responsibility = std::vector<Vector>(K,tmp);
-  long double dist,min_dist;
+  Vector distances(K,0);
   int nearest;
+  //Vector data_weights(N,1);
   for (int i=0; i<N; i++) {
-    min_dist = computeEuclideanDistance(init_means[0],data[i]);
-    nearest = 0;
-    for (int j=1; j<K; j++) {
-      dist = computeEuclideanDistance(init_means[j],data[i]);
-      if (dist < min_dist) {
-        min_dist = dist;
-        nearest = j;
-      }
+    for (int j=0; j<K; j++) {
+      distances[j] = data_weights[i] * computeEuclideanDistance(init_means[j],data[i]);
     } // for j()
+    nearest = minimumIndex(distances);
     responsibility[nearest][i] = 1;
   } // for i()
 
+  std::vector<Vector> means = init_means;
+  int NUM_ITERATIONS = 10;
+  for (int iter=0; iter<NUM_ITERATIONS; iter++) {
+    // update means
+    for (int i=0; i<K; i++) {
+      long double neff = 0;
+      means[i] = Vector(D,0);
+      for (int j=0; j<N; j++) {
+        if (responsibility[i][j] > 0.99) {
+          neff += 1;
+          for (int k=0; k<D; k++) {
+            means[i][k] += data[j][k];
+          } // for k
+        } // if()
+      } // for j
+      for (int k=0; k<D; k++) {
+        means[i][k] /= neff;
+      } // for k
+    } // for i 
+    // update memberships
+    for (int i=0; i<N; i++) {
+      for (int j=0; j<K; j++) {
+        distances[j] = data_weights[i] * computeEuclideanDistance(means[j],data[i]);
+      }
+      nearest = minimumIndex(distances);
+      responsibility[nearest][i] = 1;
+    }
+  } // iter
+  cout << "init_means: ";
+  for (int i=0; i<K; i++) {
+    print(cout,init_means[i],3);
+  }
+  cout << "\nk_means: ";
+  for (int i=0; i<K; i++) {
+    print(cout,means[i],3);
+  } cout << endl;
+
   sample_size = Vector(K,0);
   updateEffectiveSampleSize();
-  weights = Vector(K,0);
-  if (ESTIMATION == MML) {
-    updateWeights();
-  } else {
-    updateWeights_ML();
+  for (int i=0; i<K; i++) {
+    if (sample_size[i] < 5) {
+      cout << "... initialize3 failed ...\n";// sleep(5);
+      initialize();
+      return;
+    }
   }
+  weights = Vector(K,0);
+  updateWeights();
 
   // initialize parameters of each component
-  components = std::vector<MultivariateNormal>(K);
-  updateComponents();
+  Matrix cov;
+  for (int i=0; i<K; i++) {
+    cov = computeCovariance(data,responsibility[i],means[i]);
+    MultivariateNormal mvnorm(means[i],cov);
+    components.push_back(mvnorm);
+  }
+  //updateComponents();
 }
 
 /*!
@@ -565,7 +616,7 @@ long double Mixture::log_probability(Vector &x)
   Vector log_densities(K,0);
   for (int j=0; j<K; j++) {
     log_densities[j] = components[j].log_density(x);
-    //assert(!boost::math::isnan(log_densities[j]));
+    assert(!boost::math::isnan(log_densities[j]));
   }
   int max_index = maximumIndex(log_densities);
   long double max_log_density = log_densities[max_index];
@@ -588,12 +639,13 @@ long double Mixture::log_probability(Vector &x)
 long double Mixture::negativeLogLikelihood(std::vector<Vector> &sample)
 {
   long double value = 0,log_density;
-  #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) private(log_density) reduction(-:value)
+  //#pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) private(log_density) reduction(-:value)
   for (int i=0; i<sample.size(); i++) {
     log_density = log_probability(sample[i]);
     if(boost::math::isnan(log_density)) {
       writeToFile("resp",responsibility,3); 
     }
+    assert(!boost::math::isnan(log_density));
     value -= log_density;
   }
   return value;
@@ -652,6 +704,7 @@ long double Mixture::computeMinimumMessageLength()
   int num_free_params = (0.5 * D * (D+3) * K) + (K - 1);
   long double cd = computeConstantTerm(num_free_params);
   cout << "cd: " << cd << endl;
+  cd = 0;
 
   minimum_msglen = (Ik + Iw + Il + It + cd)/(log(2));
 
@@ -659,7 +712,8 @@ long double Mixture::computeMinimumMessageLength()
   part2 /= log(2);
   part1 = minimum_msglen - part2;
 
-  IK = Ik; IW = Iw; IL = Il; sum_IT = It;
+  IK = Ik; IW = Iw; IL = Il; sum_IT = It; CD = cd;
+  PART1 = part1; PART2 = part2;
 
   return minimum_msglen;
 }
@@ -699,9 +753,9 @@ long double Mixture::estimateParameters()
 
   //initialize();
 
-  initialize2();
+  //initialize2();
 
-  //initialize3();
+  initialize3();
 
   EM();
 
@@ -1116,6 +1170,7 @@ Mixture Mixture::split(int c, ostream &log)
   int num_children = 2; 
   Mixture m(num_children,data,responsibility[c]);
   m.estimateParameters();
+  //m.initialize3();
   log << "\t\tChildren:\n";
   m.printParameters(log,2); // print the child mixture
 
@@ -1186,10 +1241,13 @@ Mixture Mixture::split(int c, ostream &log)
     log << "\t\tAfter adjustment ...\n";
     merged.computeMinimumMessageLength();
     merged.printParameters(log,2);
-    /*log << "Ik: " << IK << endl;
+    log << "Ik: " << IK << endl;
     log << "Iw: " << IW << endl;
     log << "Il: " << IL << endl;
-    log << "It: " << sum_IT; print(log,IT,3); log << endl;*/
+    log << "It: " << sum_IT; print(log,IT,3); log << endl;
+    log << "cd: " << CD << endl;
+    log << "part1: " << PART1 << endl;
+    log << "part2: " << PART2 << endl;
   }
   SPLITTING = 0;
   return merged;
@@ -1370,13 +1428,13 @@ void Mixture::generateHeatmapData(long double res, int D)
     sample_size[k]++;
   }
 
-  string mix_file = "./visualize/mixture_density.dat";
+  string mix_file = "./visualize/sampled_data/mixture_density.dat";
   ofstream mix(mix_file.c_str());
 
   long double comp_density,mix_density;
   for (int i=0; i<K; i++) {
     std::vector<Vector> x = components[i].generate(sample_size[i]);
-    string comp_file = "./visualize/comp" + boost::lexical_cast<string>(i+1) 
+    string comp_file = "./visualize/sampled_data/comp" + boost::lexical_cast<string>(i+1) 
                        + "_density.dat";
     ofstream comp(comp_file.c_str());
     for (int j=0; j<x.size(); j++) {

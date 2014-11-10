@@ -913,6 +913,32 @@ void computeMeanAndCovariance(
   cov = S / Neff;
 }
 
+Matrix computeCovariance(
+  std::vector<Vector> &data, 
+  Vector &weights,
+  Vector &mean
+) {
+  int N = data.size();
+  int D = data[0].size();
+
+  long double Neff = 0;
+  for (int i=0; i<N; i++) {
+    Neff += weights[i];
+  }
+
+  std::vector<Vector> x_mu(N);
+  Vector diff(D,0);
+  for (int i=0; i<N; i++) {
+    for (int j=0; j<D; j++) {
+      diff[j] = data[i][j] - mean[j];
+    }
+    x_mu[i] = diff;
+  }
+  Matrix S = computeDispersionMatrix(x_mu,weights);
+  Matrix cov = S / Neff;
+  return cov;
+}
+
 /*!
  *  \brief This function computes the approximation of the constant term for
  *  the constant term in the message length expression (pg. 257 Wallace)
@@ -1208,7 +1234,8 @@ long double computeEuclideanDistance(Vector &p1, Vector &p2)
   for (int i=0; i<D; i++) {
     distsq += (p1[i] - p2[i]) * (p1[i] - p2[i]);
   }
-  return sqrt(distsq);
+  //return sqrt(distsq);
+  return distsq;
 }
 
 ////////////////////// MIXTURE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -1546,7 +1573,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
   TOTAL_ITERATIONS = 0;
 
   if (D <= 5) {
-    IMPROVEMENT_RATE = 0.001;
+    IMPROVEMENT_RATE = 0.0001;
   } else {
     IMPROVEMENT_RATE = 0.005;
   }
