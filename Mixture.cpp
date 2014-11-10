@@ -608,7 +608,8 @@ long double Mixture::computeMinimumMessageLength()
   IT.clear();
   // encode the number of components
   // assume uniform priors
-  long double Ik = log(MAX_COMPONENTS);
+  //long double Ik = log(MAX_COMPONENTS);
+  long double Ik = K * log(2);
   cout << "Ik: " << Ik << endl;
   assert(Ik > 0);
 

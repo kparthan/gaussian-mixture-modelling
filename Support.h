@@ -112,8 +112,11 @@ bool gatherData(struct Parameters &, std::vector<Vector> &);
 void modelOneComponent(struct Parameters &, std::vector<Vector> &);
 void modelMixture(struct Parameters &, std::vector<Vector> &);
 void simulateMixtureModel(struct Parameters &);
+void strategic_inference(struct Parameters &, Mixture &, std::vector<Vector> &);
 Mixture inferComponents(Mixture &, int, int, ostream &);
-void updateInference(Mixture &, Mixture &, ostream &, int);
+Mixture inferComponentsProbabilistic(Mixture &, int, int, ostream &);
+void updateInference(Mixture &, Mixture &, int, ostream &, int);
+void updateInferenceProbabilistic(Mixture &, Mixture &, int, ostream &, int);
 
 #endif
 

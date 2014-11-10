@@ -18,6 +18,7 @@ int TOTAL_ITERATIONS = 0;
 UniformRandomNumberGenerator *uniform_generator;
 int IGNORE_SPLIT;
 long double MIN_N;
+int STRATEGY;
 
 ////////////////////// GENERAL PURPOSE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -33,7 +34,7 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
   struct Parameters parameters;
   string parallelize,estimation_method;
   long double improvement_rate;
-  int stop_after;
+  int stop_after,strategy;
 
   bool noargs = 1;
 
@@ -48,6 +49,7 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
        ("profiles",value<string>(&parameters.profiles_dir),"path to all profiles")
        ("mixture","flag to do mixture modelling")
        ("infer_components","flag to infer the number of components")
+       ("strategy",value<int>(&STRATEGY),"strategy while inferring components")
        ("min_k",value<int>(&parameters.min_components),"min components to infer")
        ("max_k",value<int>(&parameters.max_components),"max components to infer")
        ("log",value<string>(&parameters.infer_log),"log file")
@@ -122,6 +124,9 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
         if (!vm.count("begin")) {
           parameters.start_from = 1;
         }
+      }
+      if (!vm.count("strategy")) {
+        STRATEGY = ACCEPT_DEFINITE;
       }
     } else {
       parameters.infer_num_components = UNSET;
@@ -1388,42 +1393,7 @@ void modelMixture(struct Parameters &parameters, std::vector<Vector> &data)
       } else if (parameters.continue_inference == SET) {
         mixture.load(parameters.mixture_file,parameters.D,data,data_weights);
       } // continue_inference
-      int NUM_ATTEMPTS = 3;
-      string log_file;
-      ofstream summary("inference_summary");
-      std::vector<Mixture> stable_mixtures;
-      Mixture stable,starting;
-      long double minimum_msglen,current_msglen;
-      int min_index;
-      for (int i=0; i<NUM_ATTEMPTS; i++) {
-        log_file = parameters.infer_log + "_attempt_" + boost::lexical_cast<string>(i+1);
-        ofstream log(log_file.c_str());
-        if (i == 0) {
-          starting = mixture;
-        } else if (stable.getNumberOfComponents() > starting.getNumberOfComponents()) {
-          starting = stable;
-        }
-        stable = inferComponents(starting,data.size(),data[0].size(),log);
-        if (i == 0) {
-          minimum_msglen = stable.getMinimumMessageLength();
-          min_index = 0;
-        } else {
-          //stable = inferComponents(stable_mixtures[i-1],data.size(),data[0].size(),log);
-          current_msglen = stable.getMinimumMessageLength(); 
-          if (current_msglen < minimum_msglen) {
-            minimum_msglen = current_msglen;
-            min_index = i;
-          }
-        }
-        log.close();
-        NUM_STABLE_COMPONENTS = stable.getNumberOfComponents();
-        stable_mixtures.push_back(stable);
-        summary << "stable mixture [" << i << "] : " << NUM_STABLE_COMPONENTS << endl;
-        stable.printParameters(summary,2);
-      }
-      summary << "\n\nBest mixture: \n";
-      stable_mixtures[min_index].printParameters(summary,2);
-      summary.close();
+      strategic_inference(parameters,mixture,data);
     }   
   } else if (parameters.infer_num_components == UNSET) {
     // for a given value of number of components
@@ -1481,6 +1451,77 @@ void simulateMixtureModel(struct Parameters &parameters)
   }
 }
 
+void strategic_inference(
+  struct Parameters &parameters, 
+  Mixture &mixture, 
+  std::vector<Vector> &data
+) {
+  switch(STRATEGY) {
+    case ACCEPT_DEFINITE:
+    {
+      ofstream log(parameters.infer_log.c_str());
+      Mixture stable = inferComponents(mixture,data.size(),data[0].size(),log);
+      cout << "# of components: " << stable.getNumberOfComponents() << endl;
+      log.close();
+      break;
+    }
+
+    case ACCEPT_PROBABILISTIC:
+    {
+      ofstream log(parameters.infer_log.c_str());
+      Mixture stable = inferComponentsProbabilistic(mixture,data.size(),data[0].size(),log);
+      cout << "# of components: " << stable.getNumberOfComponents() << endl;
+      log.close();
+      break;
+    }
+
+    case ACCEPT_BEST_ITER:
+    {
+      int NUM_ATTEMPTS = 3;
+      string log_file;
+      ofstream summary("inference_summary");
+      std::vector<Mixture> stable_mixtures;
+      Mixture stable,starting;
+      long double minimum_msglen,current_msglen;
+      int min_index;
+      for (int i=0; i<NUM_ATTEMPTS; i++) {
+        log_file = parameters.infer_log + "_attempt_" + boost::lexical_cast<string>(i+1);
+        ofstream log(log_file.c_str());
+        if (i == 0) {
+          starting = mixture;
+        } else if (stable.getNumberOfComponents() > starting.getNumberOfComponents()) {
+          starting = stable;
+        }
+        stable = inferComponents(starting,data.size(),data[0].size(),log);
+        if (i == 0) {
+          minimum_msglen = stable.getMinimumMessageLength();
+          min_index = 0;
+        } else {
+          current_msglen = stable.getMinimumMessageLength(); 
+          if (current_msglen < minimum_msglen) {
+            minimum_msglen = current_msglen;
+            min_index = i;
+          }
+        }
+        log.close();
+        NUM_STABLE_COMPONENTS = stable.getNumberOfComponents();
+        stable_mixtures.push_back(stable);
+        summary << "stable mixture [" << i << "] : " << NUM_STABLE_COMPONENTS << endl;
+        stable.printParameters(summary,2);
+      }
+      summary << "\n\nBest mixture: \n";
+      stable_mixtures[min_index].printParameters(summary,2);
+      summary.close();
+      break;
+    }
+
+    case ACCEPT_LAST_SPLIT:
+    {
+      break;
+    }
+  } // switch()
+}
+
 /*!
  *  \brief This function is used to infer optimum number of mixture components.
  *  \param mixture a reference to a Mixture
@@ -1508,17 +1549,10 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
   } else {
     IMPROVEMENT_RATE = 0.005;
   }
+  //IMPROVEMENT_RATE = 0.001 / D;
   while (1) {
     parent = improved;
     iter++;
-    /*if (parent.getNumberOfComponents() >= 2 && D < 5) IMPROVEMENT_RATE = 0.0005;
-    if (parent.getNumberOfComponents() >= 10 && D < 5) IMPROVEMENT_RATE = 0.0025;
-    if (parent.getNumberOfComponents() >= 15 && D < 5) IMPROVEMENT_RATE = 0.001;
-    if (parent.getNumberOfComponents() >= 3 && D >= 5) IMPROVEMENT_RATE = 0.0025;
-    if (parent.getNumberOfComponents() >= 10 && D >= 5) IMPROVEMENT_RATE = 0.001;
-    if (parent.getNumberOfComponents() >= 2 && D >= 10) IMPROVEMENT_RATE = 0.0025;
-    if (parent.getNumberOfComponents() >= 5 && D >= 10) IMPROVEMENT_RATE = 0.0001;
-    if (parent.getNumberOfComponents() >= 10 && D >= 10) IMPROVEMENT_RATE = 0.001;*/
     log << "Iteration #" << iter << endl;
     log << "Parent:\n";
     parent.printParameters(log,1);
@@ -1530,21 +1564,21 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
         IGNORE_SPLIT = 0;
         modified = parent.split(i,log);
         if (IGNORE_SPLIT == 0) {
-          updateInference(modified,improved,log,SPLIT);
+          updateInference(modified,improved,N,log,SPLIT);
         }
       }
     }*/
     if (K >= 2) {  // kill() ...
       for (int i=0; i<K; i++) {
         modified = parent.kill(i,log);
-        updateInference(modified,improved,log,KILL);
+        updateInference(modified,improved,N,log,KILL);
       } // killing each component
     } // if (K > 2) loop
     if (K > 1) {  // join() ...
       for (int i=0; i<K; i++) {
         int j = parent.getNearestComponent(i); // closest component
         modified = parent.join(i,j,log);
-        updateInference(modified,improved,log,JOIN);
+        updateInference(modified,improved,N,log,JOIN);
       } // join() ing nearest components
     } // if (K > 1) loop
     if (improved == parent) {
@@ -1553,7 +1587,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
           IGNORE_SPLIT = 0;
           modified = parent.split(i,log);
           if (IGNORE_SPLIT == 0) {
-            updateInference(modified,improved,log,SPLIT);
+            updateInference(modified,improved,N,log,SPLIT);
           }
         }
       } // for()
@@ -1572,25 +1606,123 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
  *  \param log a reference to a ostream
  *  \param operation an integer
  */
-void updateInference(Mixture &modified, Mixture &current, ostream &log, int operation)
+void updateInference(Mixture &modified, Mixture &current, int N, ostream &log, int operation)
 {
   long double modified_msglen = modified.getMinimumMessageLength();
   long double current_msglen = current.getMinimumMessageLength();
 
+  long double dI = current_msglen - modified_msglen;
+  long double dI_n = dI / N;
   long double improvement_rate = (current_msglen - modified_msglen) / current_msglen;
-  int accept_flag = 0;
 
-  if (operation == KILL || operation == JOIN /*|| (operation == SPLIT && modified.getNumberOfComponents() == 2)*/) {
+  if (operation == KILL || operation == JOIN) {
     //if (improvement_rate >= -IMPROVEMENT_RATE) {
     if (improvement_rate >= 0) {
       log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
           << 100 * improvement_rate << " %) ";
       log << "\t\t[ACCEPT]\n\n";
       current = modified;
-      accept_flag = 1;
     } else {
-      /*log << "\t ... IMPROVEMENT < " << fixed << setprecision(3) 
-          << 100 * IMPROVEMENT_RATE << " %\t\t\t[REJECT]\n\n";*/
+      log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
+    }
+  } else if (operation == SPLIT) {
+    //improvement_rate = dI_n / 10;
+    if (improvement_rate > IMPROVEMENT_RATE) {
+      log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
+          << 100 * improvement_rate << " %) ";
+      log << "\t\t[ACCEPT]\n\n";
+      current = modified;
+    } else if (improvement_rate > 0 && improvement_rate <= IMPROVEMENT_RATE) {
+      log << "\t ... IMPROVEMENT (" << 100 * improvement_rate << " %) < " << fixed << setprecision(3) 
+          << 100 * IMPROVEMENT_RATE << " %\t\t\t[REJECT]\n\n";
+      log << "\t\tdI: " << dI << " bits.\n";
+      log << "\t\tdI/N: " << dI_n << " bits.\n\n";
+    } else {
+      log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
+    }
+  }
+}
+
+Mixture inferComponentsProbabilistic(Mixture &mixture, int N, int D, ostream &log)
+{
+  int K,iter = 0;
+  std::vector<MultivariateNormal> components;
+  Mixture modified,improved,parent;
+  Vector sample_size;
+
+  if (D >= 10) {
+    MIN_N = 2 * (D + 3);
+  } else {
+    MIN_N = D + 3;
+  }
+
+  improved = mixture;
+  TOTAL_ITERATIONS = 0;
+
+  if (D <= 5) {
+    IMPROVEMENT_RATE = 0.001;
+  } else {
+    IMPROVEMENT_RATE = 0.005;
+  }
+  while (1) {
+    parent = improved;
+    iter++;
+    log << "Iteration #" << iter << endl;
+    log << "Parent:\n";
+    parent.printParameters(log,1);
+    components = parent.getComponents();
+    sample_size = parent.getSampleSize();
+    K = components.size();
+    if (K >= 2) {  // kill() ...
+      for (int i=0; i<K; i++) {
+        modified = parent.kill(i,log);
+        updateInferenceProbabilistic(modified,improved,N,log,KILL);
+      } // killing each component
+    } // if (K > 2) loop
+    if (K > 1) {  // join() ...
+      for (int i=0; i<K; i++) {
+        int j = parent.getNearestComponent(i); // closest component
+        modified = parent.join(i,j,log);
+        updateInferenceProbabilistic(modified,improved,N,log,JOIN);
+      } // join() ing nearest components
+    } // if (K > 1) loop
+    if (improved == parent) {
+      for (int i=0; i<K; i++) { // split() ...
+        if (sample_size[i] > MIN_N) {
+          IGNORE_SPLIT = 0;
+          modified = parent.split(i,log);
+          if (IGNORE_SPLIT == 0) {
+            updateInferenceProbabilistic(modified,improved,N,log,SPLIT);
+          }
+        }
+      } // for()
+    }
+    if (improved == parent) goto finish;
+  } // if (improved == parent || iter%2 == 0) loop
+
+  finish:
+  return parent;
+}
+
+void updateInferenceProbabilistic(
+  Mixture &modified, 
+  Mixture &current, 
+  int N, 
+  ostream &log, 
+  int operation
+) {
+  long double modified_msglen = modified.getMinimumMessageLength();
+  long double current_msglen = current.getMinimumMessageLength();
+
+  long double improvement_rate = (current_msglen - modified_msglen) / current_msglen;
+
+  if (operation == KILL || operation == JOIN) {
+    if (improvement_rate >= 0) {
+      log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
+          << 100 * improvement_rate << " %) ";
+      log << "\t\t[ACCEPT]\n\n";
+      current = modified;
+    } else {
       log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
     }
   } else if (operation == SPLIT) {
@@ -1599,35 +1731,23 @@ void updateInference(Mixture &modified, Mixture &current, ostream &log, int oper
           << 100 * improvement_rate << " %) ";
       log << "\t\t[ACCEPT]\n\n";
       current = modified;
-      accept_flag = 1;
-    } else {
-      log << "\t ... IMPROVEMENT < " << fixed << setprecision(3) 
-          << 100 * IMPROVEMENT_RATE << " %\t\t\t[REJECT]\n\n";
-    }
-  }
-
-  /*if (accept_flag == 0) {
-    log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
-  }*/
-
-  /*if (modified_msglen < current_msglen) {   // ... improvement
-    long double improvement_rate = (current_msglen - modified_msglen) / current_msglen;
-    if (operation != SPLIT || 
-        improvement_rate > IMPROVEMENT_RATE) {  // there is > 0.001 % improvement
-      current = modified;
-      log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
-          << 100 * improvement_rate << " %) ";
-      if (operation != SPLIT && improvement_rate < IMPROVEMENT_RATE) {
-        log << "\t\t[ACCEPT] with negligible improvement (while joining)!\n\n";
+    } else if (improvement_rate <= IMPROVEMENT_RATE) {  // slight improvement ...
+      log << "\tslight improvment.. accept/reject probabilistically ...\n";
+      long double dI = (current_msglen - modified_msglen) / N;
+      long double ratio = exponent(2,dI);
+      long double reject_prob = 1.0 / (1 + ratio);
+      long double random = uniform_random();
+      if (random > reject_prob) {
+        log << "\t ... IMPROVEMENT < " << fixed << setprecision(3) 
+            << 100 * IMPROVEMENT_RATE << " %\t\t\t[ACCEPT PROBABILISTIC]\n\n";
+        current = modified;
       } else {
-        log << "\t\t[ACCEPT]\n\n";
-      }
-    } else {  // ... no substantial improvement
-      log << "\t ... IMPROVEMENT < " << fixed << setprecision(3) 
-          << 100 * IMPROVEMENT_RATE << " %\t\t\t[REJECT]\n\n";
+        log << "\t ... IMPROVEMENT < " << fixed << setprecision(3) 
+            << 100 * IMPROVEMENT_RATE << " %\t\t\t[REJECT]\n\n";
+      } // slight impr (accept or reject?)
+    } else {  // no improvement
+      log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
     }
-  } else {    // ... no improvement
-    log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
-  }*/
+  } // operation = split
 }
 
