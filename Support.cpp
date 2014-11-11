@@ -20,6 +20,8 @@ int IGNORE_SPLIT;
 long double MIN_N;
 int STRATEGY;
 int MSGLEN_FAIL;
+long double IK,IW,sum_IT,IL,PART1,PART2,KDTERM;
+Vector IT;
 
 ////////////////////// GENERAL PURPOSE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -316,6 +318,18 @@ void print(ostream &os, std::vector<int> &v)
   } else {
     os << "No elements in v ...";
   }
+}
+
+void printIndividualMsgLengths(ostream &log_file)
+{
+  log_file << "\t\tIk: " << IK << endl;
+  log_file << "\t\tIw: " << IW << endl;
+  log_file << "\t\tIt: " << sum_IT << " "; print(log_file,IT,3); log_file << endl;
+  log_file << "\t\tlatt: " << KDTERM << endl;
+  log_file << "\t\tIl: " << IL << endl;
+  log_file << "\t\tpart1 (Ik+Iw+It+latt): " << PART1 << " + " 
+           << "part2 (Il+d/(2*log(2))): " << PART2 << " = "
+           << PART1 + PART2 << " bits." << endl << endl;
 }
 
 /*!
@@ -653,6 +667,39 @@ void RunExperiments(int iterations)
   experiments.infer_components_exp1();
 }
 
+std::vector<std::vector<TwoPairs> > generatePairs(int D)
+{
+  array<int,2> x;
+  std::vector<array<int,2> > pairs;
+
+  for (int i=0; i<D; i++) {
+    x[0] = i;
+    for (int j=i; j<D; j++) {
+      x[1] = j;
+      pairs.push_back(x);
+    }
+  }
+  //print(pairs);
+
+  int dim = 0.5 * D * (D+1);  // == pairs.size()
+  assert(dim == pairs.size());
+  std::vector<TwoPairs> row(dim);
+  std::vector<std::vector<TwoPairs> > table;
+  TwoPairs instance;
+
+  for (int i=0; i<dim; i++) {
+    instance.p1 = pairs[i];
+    for (int j=0; j<dim; j++) {
+      instance.p2 = pairs[j];
+      row[j] = instance;
+    }
+    table.push_back(row);
+  }
+  //print(table);
+
+  return table;
+}
+
 ////////////////////// GEOMETRY FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 // not unit vectors ...
@@ -910,7 +957,7 @@ void computeMeanAndCovariance(
     x_mu[i] = diff;
   }
   Matrix S = computeDispersionMatrix(x_mu,weights);
-  cov = S / Neff;
+  cov = S / (Neff - 1);
 }
 
 Matrix computeCovariance(
@@ -935,7 +982,7 @@ Matrix computeCovariance(
     x_mu[i] = diff;
   }
   Matrix S = computeDispersionMatrix(x_mu,weights);
-  Matrix cov = S / Neff;
+  Matrix cov = S / (Neff - 1);
   return cov;
 }
 
@@ -951,6 +998,14 @@ long double computeConstantTerm(int d)
   ad -= 0.5 * d * log(2 * PI);
   ad += 0.5 * log(d * PI);
   return ad;
+}
+
+long double logLatticeConstant(int d)
+{
+  long double cd = computeConstantTerm(d);
+  long double ans = -1;
+  ans += (2.0 * cd / d);
+  return ans;
 }
 
 // n-dimensional rotation matrix x -> y (H x = y)
@@ -1568,22 +1623,23 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
   } else {
     MIN_N = D + 3;
   }
+  MIN_N = D + 3;
 
   improved = mixture;
   TOTAL_ITERATIONS = 0;
 
-  if (D <= 5) {
-    IMPROVEMENT_RATE = 0.0001;
+  /*if (D <= 5) {
+    IMPROVEMENT_RATE = 0.000;
   } else {
-    IMPROVEMENT_RATE = 0.005;
-  }
-  //IMPROVEMENT_RATE = 0.001 / D;
+    IMPROVEMENT_RATE = 0.000;
+  }*/
   while (1) {
     parent = improved;
     iter++;
     log << "Iteration #" << iter << endl;
     log << "Parent:\n";
     parent.printParameters(log,1);
+    printIndividualMsgLengths(log);
     components = parent.getComponents();
     sample_size = parent.getSampleSize();
     K = components.size();
@@ -1643,8 +1699,7 @@ void updateInference(Mixture &modified, Mixture &current, int N, ostream &log, i
   long double dI_n = dI / N;
   long double improvement_rate = (current_msglen - modified_msglen) / current_msglen;
 
-  if (operation == KILL || operation == JOIN) {
-    //if (improvement_rate >= -IMPROVEMENT_RATE) {
+  if (operation == KILL || operation == JOIN || operation == SPLIT) {
     if (improvement_rate >= 0) {
       log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
           << 100 * improvement_rate << " %) ";
@@ -1654,7 +1709,6 @@ void updateInference(Mixture &modified, Mixture &current, int N, ostream &log, i
       log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
     }
   } else if (operation == SPLIT) {
-    //improvement_rate = dI_n / 10;
     if (improvement_rate > IMPROVEMENT_RATE) {
       log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
           << 100 * improvement_rate << " %) ";

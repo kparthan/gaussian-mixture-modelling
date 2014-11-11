@@ -40,6 +40,11 @@ struct Estimates {
   Matrix cov_ml,cov_mml;
 };
 
+struct TwoPairs 
+{
+  array<int,2> p1,p2;
+};
+
 // general functions
 struct Parameters parseCommandLineInput (int, char **); 
 void Usage (const char *, options_description &);
@@ -50,6 +55,7 @@ string extractName(string &);
 void initializeMatrix(std::vector<Vector> &, int, int);
 void print(ostream &, Vector &, int);
 void print(ostream &, std::vector<int> &);
+void printIndividualMsgLengths(ostream &);
 int sign(long double);
 long double exponent(long double, long double);
 long double uniform_random();
@@ -74,6 +80,7 @@ int maximumIndex(Vector &);
 void setEstimationMethod(int);
 void TestFunctions();
 void RunExperiments(int);
+std::vector<std::vector<TwoPairs> > generatePairs(int);
 
 // geometry functions
 std::vector<Vector> load_matrix(string &, int);
@@ -92,6 +99,7 @@ void computeMeanAndCovariance(std::vector<Vector> &, Vector &, Vector &, Matrix 
 Matrix computeCovariance(std::vector<Vector> &, Vector &, Vector &);
 Matrix computeNormalizedDispersionMatrix(std::vector<Vector> &);
 long double computeConstantTerm(int);
+long double logLatticeConstant(int);
 Matrix computeOrthogonalTransformation(Vector &, Vector &);
 Matrix generateRandomCovarianceMatrix(int);
 Matrix generateRandomCovarianceMatrix(int, long double);

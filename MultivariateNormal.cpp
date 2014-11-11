@@ -27,12 +27,12 @@ void MultivariateNormal::updateConstants()
     cout << "cov: " << cov << endl;
     cout << "inverse: " << cov_inv << endl;
     cout << "det_cov: " << det_cov << endl;
-    /*if (fabs(det_cov) < 1e-6) {
+    if (fabs(det_cov) < 1e-6) {
       det_cov = fabs(det_cov);
-    }*/
+    }
   }
   assert(det_cov > 0);
-  //det_cov = fabs(det_cov);
+  det_cov = fabs(det_cov);
 
   /*long double MIN_SIGMA = AOM;
   if (det_cov < 0 || fabs(det_cov) < 1e-12) {
@@ -239,6 +239,11 @@ long double MultivariateNormal::getLogNormalizationConstant()
   return log_cd;
 }
 
+int MultivariateNormal::getDimensionality()
+{
+  return D;
+}
+
 long double MultivariateNormal::log_density(Vector &x)
 {
   long double log_pdf = log_cd;
@@ -311,10 +316,40 @@ long double MultivariateNormal::computeLogPriorDensity()
 
 long double MultivariateNormal::computeLogFisherInformation(long double Neff)
 {
+  int dim = 0.5 * D * (D+1);
+  Matrix cov_inv_fisher = ZeroMatrix(dim,dim);
+  std::vector<std::vector<TwoPairs> > pairs = generatePairs(D);
+  TwoPairs instance;
+
+  long double v_ik,v_jl,v_il,v_jk;
+  int i,j,k,l;
+  for (int row=0; row<dim; row++) {
+    for (int col=0; col<dim; col++) {
+      instance = pairs[row][col];
+      i = instance.p1[0];
+      j = instance.p1[1];
+      k = instance.p2[0];
+      l = instance.p2[1];
+      v_ik = cov(i,k);
+      v_jl = cov(j,l);
+      v_il = cov(i,l);
+      v_jk = cov(j,k);
+      cov_inv_fisher(row,col) = v_ik * v_jl + v_il * v_jk;
+    } // col
+  } // row
+  Matrix cov_fisher(dim,dim);
+  long double det_cov_inv_fisher;
+  invertMatrix(cov_inv_fisher,cov_fisher,det_cov_inv_fisher);
+  //assert(det_cov_inv_fisher > 0);
+  if (det_cov_inv_fisher <= 0) {
+    cout << "det_cov_inv_fisher: " << det_cov_inv_fisher << endl;
+    det_cov_inv_fisher *= -1;
+  }
+
   long double log_fisher = 0;
-  log_fisher += (2 * D * log(Neff));
-  log_fisher -= (D * log(2));
-  log_fisher -= (3 * log(det_cov));
+  log_fisher += (0.5 * D * (D+3) * log(Neff));
+  log_fisher -= log(det_cov); // mu fisher term
+  log_fisher -= log(det_cov_inv_fisher);  // cov fisher term
   return log_fisher;
 }
 

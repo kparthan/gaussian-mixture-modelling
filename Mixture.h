@@ -12,6 +12,9 @@ class Mixture
     //! Sample size
     int N;
 
+    //! Dimensionality of data
+    int D;
+
     //! Number of components
     int K;
 
@@ -84,6 +87,7 @@ class Mixture
     void initialize();
     void initialize2();
     void initialize3();
+    void initialize4();
 
     //! Updates the effective sample size
     void updateEffectiveSampleSize();

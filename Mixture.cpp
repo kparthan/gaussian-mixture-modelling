@@ -14,8 +14,8 @@ extern int IGNORE_SPLIT;
 extern long double MIN_N;
 extern int MSGLEN_FAIL;
 
-long double IK,IW,IL,sum_IT,PART1,PART2,CD;
-Vector IT;
+extern long double IK,IW,sum_IT,IL,PART1,PART2,KDTERM;
+extern Vector IT;
 
 /*!
  *  \brief Null constructor module
@@ -37,6 +37,7 @@ Mixture::Mixture(int K, std::vector<MultivariateNormal> &components, Vector &wei
   assert(components.size() == K);
   assert(weights.size() == K);
   id = MIXTURE_ID++;
+  D = components[0].getDimensionality();
   minimum_msglen = 0;
 }
 
@@ -51,6 +52,7 @@ Mixture::Mixture(int K, std::vector<Vector> &data, Vector &data_weights) :
 {
   id = MIXTURE_ID++;
   N = data.size();
+  D = data[0].size();
   assert(data_weights.size() == N);
   minimum_msglen = 0;
 }
@@ -82,6 +84,7 @@ Mixture::Mixture(
   assert(sample_size.size() == K);
   assert(responsibility.size() == K);
   N = data.size();
+  D = data[0].size();
   assert(data_weights.size() == N);
   minimum_msglen = 0;
 }
@@ -95,6 +98,7 @@ Mixture Mixture::operator=(const Mixture &source)
   if (this != &source) {
     id = source.id;
     N = source.N;
+    D = source.D;
     K = source.K;
     components = source.components;
     data = source.data;
@@ -229,8 +233,8 @@ void Mixture::initialize()
 
 void Mixture::initialize2()
 {
-  N = data.size();
-  int D = data[0].size();
+  //N = data.size();
+  //int D = data[0].size();
   cout << "Sample size: " << N << endl;
 
   long double init_weight = 1.0 / K;
@@ -298,7 +302,7 @@ void Mixture::initialize2()
   }
   updateEffectiveSampleSize();
   for (int i=0; i<K; i++) {
-    if (sample_size[i] < 5) {
+    if (sample_size[i] < MIN_N) {
       cout << "... initialize2 failed ...\n";// sleep(5);
       initialize();
       return;
@@ -308,8 +312,8 @@ void Mixture::initialize2()
 
 void Mixture::initialize3()
 {
-  N = data.size();
-  int D = data[0].size();
+  //N = data.size();
+  //int D = data[0].size();
   cout << "Sample size: " << N << endl;
 
   int trials=0,max_trials = 5;
@@ -324,14 +328,6 @@ void Mixture::initialize3()
       flags[index] = 1;
     } else i--;
   }
-  /*for (int i=0; i<K; i++) {
-    int max_index = maximumIndex(da)
-    int index = rand() % N;
-    if (flags[index] == 0) {
-      init_means[i] = data[i];
-      flags[index] = 1;
-    } else i--;
-  }*/
   // initialize memberships (hard)
   Vector tmp(N,0);
   responsibility = std::vector<Vector>(K,tmp);
@@ -386,7 +382,7 @@ void Mixture::initialize3()
   sample_size = Vector(K,0);
   updateEffectiveSampleSize();
   for (int i=0; i<K; i++) {
-    if (sample_size[i] < 5) {
+    if (sample_size[i] < MIN_N) {
       cout << "... initialize3 failed ...\n";// sleep(5);
       initialize();
       return;
@@ -402,7 +398,84 @@ void Mixture::initialize3()
     MultivariateNormal mvnorm(means[i],cov);
     components.push_back(mvnorm);
   }
-  //updateComponents();
+}
+
+void Mixture::initialize4()
+{
+  assert(K == 2);
+  Vector mean;
+  Matrix cov;
+  computeMeanAndCovariance(data,data_weights,mean,cov);
+
+  // eigen decomposition of cov
+  Vector eigen_values(D,0);
+  Matrix eigen_vectors = IdentityMatrix(D,D);
+  eigenDecomposition(cov,eigen_values,eigen_vectors);
+  Vector projection_axis(D,0);
+  for (int i=0; i<D; i++) {
+    projection_axis[i] = eigen_vectors(0,i);
+  }
+
+  std::vector<Vector> x_mu(N);
+  Vector diff(D,0);
+  for (int i=0; i<N; i++) {
+    for (int j=0; j<D; j++) {
+      diff[j] = data[i][j] - mean[j];
+    }
+    x_mu[i] = diff;
+  }
+  Vector projections(N,0);
+  for (int i=0; i<N; i++) {
+    projections[i] = data_weights[i] * computeDotProduct(x_mu[i],projection_axis);
+    //projections[i] = computeDotProduct(x_mu[i],projection_axis);
+  }
+  int min_index = minimumIndex(projections);
+  int max_index = maximumIndex(projections);
+  std::vector<Vector> means(K);
+  means[0] = data[min_index];
+  means[1] = data[max_index];
+  /*means[0] = Vector(D,0);
+  for (int i=0; i<D; i++) {
+    means[0][i] = eigen_values[0] * projection_axis[i];
+  }
+  means[1] = Vector(D,0);
+  for (int i=0; i<D; i++) {
+    means[1][i] = -means[0][i];
+  }*/
+
+  Vector tmp(N,0);
+  responsibility = std::vector<Vector>(K,tmp);
+  Vector distances(K,0);
+  int nearest;
+  for (int i=0; i<N; i++) {
+    for (int j=0; j<K; j++) {
+      distances[j] = computeEuclideanDistance(means[j],data[i]);
+    } // for j()
+    nearest = minimumIndex(distances);
+    responsibility[nearest][i] = 1;
+  } // for i()
+  sample_size = Vector(K,0);
+  updateEffectiveSampleSize();
+  for (int i=0; i<K; i++) {
+    if (sample_size[i] < MIN_N) {
+      cout << "... initialize4 failed ...\n";// sleep(5);
+      initialize();
+      return;
+    }
+  }
+  weights = Vector(K,0);
+  updateWeights();
+
+  // initialize parameters of each component
+  std::vector<Vector> responsibility2(K,tmp);
+  for (int i=0; i<K; i++) {
+    for (int j=0; j<N; j++) {
+      responsibility2[i][j] = responsibility[i][j] * data_weights[j];
+    }
+    cov = computeCovariance(data,responsibility2[i],means[i]);
+    MultivariateNormal mvnorm(means[i],cov);
+    components.push_back(mvnorm);
+  }
 }
 
 /*!
@@ -639,7 +712,7 @@ long double Mixture::log_probability(Vector &x)
 long double Mixture::negativeLogLikelihood(std::vector<Vector> &sample)
 {
   long double value = 0,log_density;
-  //#pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) private(log_density) reduction(-:value)
+  #pragma omp parallel for if(ENABLE_DATA_PARALLELISM) num_threads(NUM_THREADS) private(log_density) reduction(-:value)
   for (int i=0; i<sample.size(); i++) {
     log_density = log_probability(sample[i]);
     if(boost::math::isnan(log_density)) {
@@ -659,13 +732,16 @@ long double Mixture::negativeLogLikelihood(std::vector<Vector> &sample)
 long double Mixture::computeMinimumMessageLength()
 {
   MSGLEN_FAIL = 0;
-  IT.clear();
+  part1 = 0;
+  part2 = 0;
+
+  /****************** PART 1 *********************/
+
   // encode the number of components
   // assume uniform priors
   //long double Ik = log(MAX_COMPONENTS);
   long double Ik = K * log(2);
   cout << "Ik: " << Ik << endl;
-  assert(Ik > 0);
 
   // enocde the weights
   long double Iw = ((K-1)/2.0) * log(N);
@@ -676,8 +752,30 @@ long double Mixture::computeMinimumMessageLength()
   cout << "Iw: " << Iw << endl;
   //assert(Iw >= 0);
 
+  // encode the parameters of the components
+  IT.clear();
+  long double It = 0,logp;
+  for (int i=0; i<K; i++) {
+    logp = components[i].computeLogParametersProbability(sample_size[i]);
+    IT.push_back(logp/log(2));
+    It += logp;
+  }
+  cout << "It: " << It << endl;
+  /*if (It <= 0) { cout << It << endl;}
+  fflush(stdout);
+  assert(It > 0);*/
+
+  // the constant term
+  //int D = data[0].size();
+  int num_free_params = (0.5 * D * (D+3) * K) + (K - 1);
+  long double log_lattice_constant = logLatticeConstant(num_free_params);
+  long double kd_term = 0.5 * num_free_params * log_lattice_constant;
+
+  part1 = (Ik + Iw + It + kd_term) / log(2);
+
+  /****************** PART 2 *********************/
+
   // encode the likelihood of the sample
-  int D = data[0].size();
   long double Il_partial = negativeLogLikelihood(data);
   long double Il = Il_partial - (D * N * log(AOM));
   cout << "Il: " << Il << endl;
@@ -688,31 +786,12 @@ long double Mixture::computeMinimumMessageLength()
     return minimum_msglen;
   }
 
-  // encode the parameters of the components
-  long double It = 0,logp;
-  /*for (int i=0; i<K; i++) {
-    logp = components[i].computeLogParametersProbability(sample_size[i]);
-    IT.push_back(logp);
-    It += logp;
-  }
-  cout << "It: " << It << endl;*/
-  /*if (It <= 0) { cout << It << endl;}
-  fflush(stdout);
-  assert(It > 0);*/
+  long double constant = 0.5 * num_free_params;
+  part2 = (Il + constant) / log(2);
 
-  // the constant term
-  int num_free_params = (0.5 * D * (D+3) * K) + (K - 1);
-  long double cd = computeConstantTerm(num_free_params);
-  cout << "cd: " << cd << endl;
-  cd = 0;
+  minimum_msglen = part1 + part2;
 
-  minimum_msglen = (Ik + Iw + Il + It + cd)/(log(2));
-
-  part2 = Il + num_free_params/2.0;
-  part2 /= log(2);
-  part1 = minimum_msglen - part2;
-
-  IK = Ik; IW = Iw; IL = Il; sum_IT = It; CD = cd;
+  IK = Ik/log(2); IW = Iw/log(2); IL = Il/log(2); sum_IT = It/log(2); KDTERM = kd_term/log(2);
   PART1 = part1; PART2 = part2;
 
   return minimum_msglen;
@@ -745,17 +824,19 @@ string Mixture::getLogFile()
  */
 long double Mixture::estimateParameters()
 {
-  /*if (SPLITTING == 1) {
-    initialize();
+  if (SPLITTING == 1) {
+    initialize4();
   } else {
-    initialize2();
-  }*/
+    initialize3();
+  }
 
   //initialize();
 
   //initialize2();
 
-  initialize3();
+  //initialize3();
+
+  //initialize4();
 
   EM();
 
@@ -777,6 +858,7 @@ void Mixture::EM()
   int iter = 1;
   printParameters(log,0,0);
 
+  long double impr_rate = 0.00001;
   /* EM loop */
   //if (ESTIMATION == MML) {
     while (1) {
@@ -806,7 +888,7 @@ void Mixture::EM()
         //          fabs(prev - current) <= 0.0001 * fabs(prev)
         // ... it's very hard to satisfy this condition and EM() goes into
         // ... an infinite loop!
-        if ((iter > 3 && (prev - current) <= IMPROVEMENT_RATE * prev) ||
+        if ((iter > 3 && (prev - current) <= impr_rate * prev) ||
               (iter > 1 && current > prev) || current <= 0 || MSGLEN_FAIL == 1) {
           stop:
           log << "\nSample size: " << N << endl;
@@ -990,8 +1072,9 @@ void Mixture::printParameters(ostream &os)
  *  \param file_name a reference to a string
  *  \param D an integer
  */
-void Mixture::load(string &file_name, int D)
+void Mixture::load(string &file_name, int dim)
 {
+  D = dim;
   sample_size.clear();
   weights.clear();
   components.clear();
@@ -1041,8 +1124,9 @@ void Mixture::load(string &file_name, int D)
  *  \param d a reference to a std::vector<Vector>
  *  \param dw a reference to a Vector
  */
-void Mixture::load(string &file_name, int D, std::vector<Vector> &d, Vector &dw)
+void Mixture::load(string &file_name, int dim, std::vector<Vector> &d, Vector &dw)
 {
+  D = dim;
   load(file_name,D);
   data = d;
   N = data.size();
@@ -1083,7 +1167,7 @@ int Mixture::randomComponent()
  */
 void Mixture::saveComponentData(int index, std::vector<Vector> &data)
 {
-  string data_file = "./visualize/comp";
+  string data_file = "./visualize/sampled_data/comp";
   data_file += boost::lexical_cast<string>(index+1) + ".dat";
   //components[index].printParameters(cout);
   ofstream file(data_file.c_str());
@@ -1170,7 +1254,6 @@ Mixture Mixture::split(int c, ostream &log)
   int num_children = 2; 
   Mixture m(num_children,data,responsibility[c]);
   m.estimateParameters();
-  //m.initialize3();
   log << "\t\tChildren:\n";
   m.printParameters(log,2); // print the child mixture
 
@@ -1241,13 +1324,7 @@ Mixture Mixture::split(int c, ostream &log)
     log << "\t\tAfter adjustment ...\n";
     merged.computeMinimumMessageLength();
     merged.printParameters(log,2);
-    log << "Ik: " << IK << endl;
-    log << "Iw: " << IW << endl;
-    log << "Il: " << IL << endl;
-    log << "It: " << sum_IT; print(log,IT,3); log << endl;
-    log << "cd: " << CD << endl;
-    log << "part1: " << PART1 << endl;
-    log << "part2: " << PART2 << endl;
+    printIndividualMsgLengths(log);
   }
   SPLITTING = 0;
   return merged;
