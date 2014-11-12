@@ -315,8 +315,6 @@ void Mixture::initialize2()
 
 void Mixture::initialize3()
 {
-  //N = data.size();
-  //int D = data[0].size();
   cout << "Sample size: " << N << endl;
 
   int trials=0,max_trials = 5;
@@ -336,7 +334,6 @@ void Mixture::initialize3()
   responsibility = std::vector<Vector>(K,tmp);
   Vector distances(K,0);
   int nearest;
-  //Vector data_weights(N,1);
   for (int i=0; i<N; i++) {
     for (int j=0; j<K; j++) {
       distances[j] = data_weights[i] * computeEuclideanDistance(init_means[j],data[i]);
@@ -356,7 +353,7 @@ void Mixture::initialize3()
         if (responsibility[i][j] > 0.99) {
           neff += 1;
           for (int k=0; k<D; k++) {
-            means[i][k] += data[j][k];
+            means[i][k] += data_weights[j] * data[j][k];
           } // for k
         } // if()
       } // for j
@@ -416,7 +413,7 @@ void Mixture::initialize4()
   eigenDecomposition(cov,eigen_values,eigen_vectors);
   Vector projection_axis(D,0);
   for (int i=0; i<D; i++) {
-    projection_axis[i] = eigen_vectors(0,i);
+    projection_axis[i] = eigen_vectors(i,0);
   }
 
   std::vector<Vector> x_mu(N);
@@ -434,17 +431,15 @@ void Mixture::initialize4()
   }
   int min_index = minimumIndex(projections);
   int max_index = maximumIndex(projections);
-  std::vector<Vector> means(K);
-  means[0] = data[min_index];
-  means[1] = data[max_index];
-  /*means[0] = Vector(D,0);
+  std::vector<Vector> init_means(K);
+  init_means[0] = Vector(D,0);
+  init_means[1] = Vector(D,0);
+  long double add;
   for (int i=0; i<D; i++) {
-    means[0][i] = eigen_values[0] * projection_axis[i];
+    add = eigen_values[0] * projection_axis[i];
+    init_means[0][i] = mean[i] + add; 
+    init_means[1][i] = mean[i] - add;
   }
-  means[1] = Vector(D,0);
-  for (int i=0; i<D; i++) {
-    means[1][i] = -means[0][i];
-  }*/
 
   Vector tmp(N,0);
   responsibility = std::vector<Vector>(K,tmp);
@@ -452,16 +447,17 @@ void Mixture::initialize4()
   int nearest;
   for (int i=0; i<N; i++) {
     for (int j=0; j<K; j++) {
-      distances[j] = computeEuclideanDistance(means[j],data[i]);
+      distances[j] = data_weights[i] * computeEuclideanDistance(init_means[j],data[i]);
     } // for j()
     nearest = minimumIndex(distances);
     responsibility[nearest][i] = 1;
   } // for i()
+
   sample_size = Vector(K,0);
   updateEffectiveSampleSize();
   for (int i=0; i<K; i++) {
     if (sample_size[i] < MIN_N) {
-      cout << "... initialize4 failed ...\n";// sleep(5);
+      cout << "... initialize4 failed ...\n"; sleep(5);
       initialize();
       return;
     }
@@ -472,11 +468,8 @@ void Mixture::initialize4()
   // initialize parameters of each component
   std::vector<Vector> responsibility2(K,tmp);
   for (int i=0; i<K; i++) {
-    for (int j=0; j<N; j++) {
-      responsibility2[i][j] = responsibility[i][j] * data_weights[j];
-    }
-    cov = computeCovariance(data,responsibility2[i],means[i]);
-    MultivariateNormal mvnorm(means[i],cov);
+    cov = computeCovariance(data,responsibility[i],init_means[i]);
+    MultivariateNormal mvnorm(init_means[i],cov);
     components.push_back(mvnorm);
   }
 }
@@ -744,6 +737,7 @@ long double Mixture::computeMinimumMessageLength()
   // assume uniform priors
   //long double Ik = log(MAX_COMPONENTS);
   Ik = K;
+  //Ik = log(MAX_COMPONENTS) / log(2);
   cout << "Ik: " << Ik << endl;
 
   // enocde the weights
@@ -843,8 +837,12 @@ string Mixture::getLogFile()
 long double Mixture::estimateParameters()
 {
   if (SPLITTING == 1) {
+    //initialize2();
+    //initialize3();
     initialize4();
   } else {
+    //initialize();
+    //initialize2();
     initialize3();
   }
 

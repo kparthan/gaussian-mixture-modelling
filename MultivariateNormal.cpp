@@ -31,7 +31,7 @@ void MultivariateNormal::updateConstants()
       det_cov = fabs(det_cov);
     }
   }
-  assert(det_cov > 0);
+  //assert(det_cov > 0);
   det_cov = fabs(det_cov);
 
   /*long double MIN_SIGMA = AOM;
@@ -313,7 +313,7 @@ long double MultivariateNormal::computeLogPriorDensity()
   long double log_prior = D * log(R1);
 
   // prior on cov (inverse wishart assumption)
-  /*long double df = D; // > D - 1 (real)
+  /*long double df = D+2; // > D - 1 (real)
   log_prior += (0.5 * df * D * log(2)); // constant term
   log_prior += computeLogMultivariateGamma(D,0.5*df);
   // trace of cov_inv
