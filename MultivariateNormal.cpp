@@ -309,7 +309,21 @@ long double MultivariateNormal::computeLogParametersProbability(long double Neff
 
 long double MultivariateNormal::computeLogPriorDensity()
 {
+  // prior on mu
   long double log_prior = D * log(R1);
+
+  // prior on cov (inverse wishart assumption)
+  /*long double df = D; // > D - 1 (real)
+  log_prior += (0.5 * df * D * log(2)); // constant term
+  log_prior += computeLogMultivariateGamma(D,0.5*df);
+  // trace of cov_inv
+  long double trace = 0;
+  for (int i=0; i<D; i++) {
+    trace += cov_inv(i,i);
+  }
+  assert(trace > 0);
+  log_prior += 0.5 * trace;
+  log_prior += (0.5 * (df+D+1) * log(det_cov));*/
   log_prior += (0.5 * (D+1) * log(det_cov));
   return -log_prior;
 }

@@ -14,9 +14,6 @@ extern int IGNORE_SPLIT;
 extern long double MIN_N;
 extern int MSGLEN_FAIL;
 
-extern long double IK,IW,sum_IT,IL,PART1,PART2,KDTERM;
-extern Vector IT;
-
 /*!
  *  \brief Null constructor module
  */
@@ -111,6 +108,12 @@ Mixture Mixture::operator=(const Mixture &source)
     minimum_msglen = source.minimum_msglen;
     part1 = source.part1;
     part2 = source.part2;
+    Ik = source.Ik;
+    Iw = source.Iw;
+    It = source.It;
+    sum_It = source.sum_It;
+    Il = source.Il;
+    kd_term = source.kd_term;
   }
   return *this;
 }
@@ -740,27 +743,30 @@ long double Mixture::computeMinimumMessageLength()
   // encode the number of components
   // assume uniform priors
   //long double Ik = log(MAX_COMPONENTS);
-  long double Ik = K * log(2);
+  Ik = K;
   cout << "Ik: " << Ik << endl;
 
   // enocde the weights
-  long double Iw = ((K-1)/2.0) * log(N);
+  Iw = ((K-1)/2.0) * log(N);
   Iw -= boost::math::lgamma<long double>(K); // log(K-1)!
   for (int i=0; i<K; i++) {
     Iw -= 0.5 * log(weights[i]);
   }
+  Iw /= log(2);
   cout << "Iw: " << Iw << endl;
   //assert(Iw >= 0);
 
   // encode the parameters of the components
-  IT.clear();
-  long double It = 0,logp;
+  It.clear();
+  sum_It = 0;
+  long double logp;
   for (int i=0; i<K; i++) {
     logp = components[i].computeLogParametersProbability(sample_size[i]);
-    IT.push_back(logp/log(2));
-    It += logp;
+    logp /= log(2);
+    It.push_back(logp);
+    sum_It += logp;
   }
-  cout << "It: " << It << endl;
+  cout << "It: " << sum_It << endl;
   /*if (It <= 0) { cout << It << endl;}
   fflush(stdout);
   assert(It > 0);*/
@@ -769,15 +775,17 @@ long double Mixture::computeMinimumMessageLength()
   //int D = data[0].size();
   int num_free_params = (0.5 * D * (D+3) * K) + (K - 1);
   long double log_lattice_constant = logLatticeConstant(num_free_params);
-  long double kd_term = 0.5 * num_free_params * log_lattice_constant;
+  kd_term = 0.5 * num_free_params * log_lattice_constant;
+  kd_term /= log(2);
 
-  part1 = (Ik + Iw + It + kd_term) / log(2);
+  part1 = Ik + Iw + sum_It + kd_term;
 
   /****************** PART 2 *********************/
 
   // encode the likelihood of the sample
   long double Il_partial = negativeLogLikelihood(data);
-  long double Il = Il_partial - (D * N * log(AOM));
+  Il = Il_partial - (D * N * log(AOM));
+  Il /= log(2);
   cout << "Il: " << Il << endl;
   //assert(Il > 0);
   if (Il < 0 || boost::math::isnan(Il)) {
@@ -787,14 +795,24 @@ long double Mixture::computeMinimumMessageLength()
   }
 
   long double constant = 0.5 * num_free_params;
-  part2 = (Il + constant) / log(2);
+  constant /= log(2);
+  part2 = Il + constant;
 
   minimum_msglen = part1 + part2;
 
-  IK = Ik/log(2); IW = Iw/log(2); IL = Il/log(2); sum_IT = It/log(2); KDTERM = kd_term/log(2);
-  PART1 = part1; PART2 = part2;
-
   return minimum_msglen;
+}
+
+void Mixture::printIndividualMsgLengths(ostream &log_file)
+{
+  log_file << "\t\tIk: " << Ik << endl;
+  log_file << "\t\tIw: " << Iw << endl;
+  log_file << "\t\tIt: " << sum_It << " "; print(log_file,It,3); log_file << endl;
+  log_file << "\t\tlatt: " << kd_term << endl;
+  log_file << "\t\tIl: " << Il << endl;
+  log_file << "\t\tpart1 (Ik+Iw+It+latt): " << part1 << " + " 
+           << "part2 (Il+d/(2*log(2))): " << part2 << " = "
+           << part1 + part2 << " bits." << endl << endl;
 }
 
 /*!
@@ -1324,7 +1342,7 @@ Mixture Mixture::split(int c, ostream &log)
     log << "\t\tAfter adjustment ...\n";
     merged.computeMinimumMessageLength();
     merged.printParameters(log,2);
-    printIndividualMsgLengths(log);
+    merged.printIndividualMsgLengths(log);
   }
   SPLITTING = 0;
   return merged;

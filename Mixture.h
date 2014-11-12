@@ -43,7 +43,8 @@ class Mixture
     long double null_msglen;
 
     //! Optimal encoding length
-    long double part1,part2,minimum_msglen;
+    long double Ik,Iw,sum_It,Il,kd_term,part1,part2,minimum_msglen;
+    Vector It;
 
   public:
     //! Null constructor
@@ -119,6 +120,8 @@ class Mixture
 
     //! Computes the minimum message length
     long double computeMinimumMessageLength();
+
+    void printIndividualMsgLengths(ostream &);
 
     //! Gets the minimum message length
     long double getMinimumMessageLength();

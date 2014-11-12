@@ -20,8 +20,6 @@ int IGNORE_SPLIT;
 long double MIN_N;
 int STRATEGY;
 int MSGLEN_FAIL;
-long double IK,IW,sum_IT,IL,PART1,PART2,KDTERM;
-Vector IT;
 
 ////////////////////// GENERAL PURPOSE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -318,18 +316,6 @@ void print(ostream &os, std::vector<int> &v)
   } else {
     os << "No elements in v ...";
   }
-}
-
-void printIndividualMsgLengths(ostream &log_file)
-{
-  log_file << "\t\tIk: " << IK << endl;
-  log_file << "\t\tIw: " << IW << endl;
-  log_file << "\t\tIt: " << sum_IT << " "; print(log_file,IT,3); log_file << endl;
-  log_file << "\t\tlatt: " << KDTERM << endl;
-  log_file << "\t\tIl: " << IL << endl;
-  log_file << "\t\tpart1 (Ik+Iw+It+latt): " << PART1 << " + " 
-           << "part2 (Il+d/(2*log(2))): " << PART2 << " = "
-           << PART1 + PART2 << " bits." << endl << endl;
 }
 
 /*!
@@ -1293,6 +1279,17 @@ long double computeEuclideanDistance(Vector &p1, Vector &p2)
   return distsq;
 }
 
+long double computeLogMultivariateGamma(int p, long double a)
+{
+  long double ans = 0.25 * p * (p-1) * log(PI);
+  long double x;
+  for (int i=1; i<=p ;i++) {
+    x = a + 0.5 * (1 - i);
+    ans += boost::math::lgamma<long double>(x);
+  }
+  return ans;
+}
+
 ////////////////////// MIXTURE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 /*!
@@ -1628,18 +1625,13 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
   improved = mixture;
   TOTAL_ITERATIONS = 0;
 
-  /*if (D <= 5) {
-    IMPROVEMENT_RATE = 0.000;
-  } else {
-    IMPROVEMENT_RATE = 0.000;
-  }*/
   while (1) {
     parent = improved;
     iter++;
     log << "Iteration #" << iter << endl;
     log << "Parent:\n";
     parent.printParameters(log,1);
-    printIndividualMsgLengths(log);
+    parent.printIndividualMsgLengths(log);
     components = parent.getComponents();
     sample_size = parent.getSampleSize();
     K = components.size();

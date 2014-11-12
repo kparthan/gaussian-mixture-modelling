@@ -55,7 +55,6 @@ string extractName(string &);
 void initializeMatrix(std::vector<Vector> &, int, int);
 void print(ostream &, Vector &, int);
 void print(ostream &, std::vector<int> &);
-void printIndividualMsgLengths(ostream &);
 int sign(long double);
 long double exponent(long double, long double);
 long double uniform_random();
@@ -111,6 +110,7 @@ void eigenDecomposition(Matrix, Vector &, Matrix &);
 void jacobiRotateMatrix(Matrix &, Matrix &, int, int);
 Vector generateRandomUnitVector(int);
 long double computeEuclideanDistance(Vector &, Vector &);
+long double computeLogMultivariateGamma(int, long double);
 
 // mixture functions
 Vector generateFromSimplex(int);
