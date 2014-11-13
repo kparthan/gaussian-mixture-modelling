@@ -1,4 +1,7 @@
-function [] = heat_map_bivariate(K)
+function [] = heat_map_bivariate(K,mixture)
+
+% read the mixture
+[mus,covs] = parse(K,mixture);
 
 M = load('../sampled_data/mixture_density.dat');
 x = M(:,1);
@@ -10,6 +13,10 @@ xlabel('X');
 ylabel('Y');
 zlabel('Z');
 savefig(fig,'../figs/mixture_density.fig');
+hold on;
+for i=1:K
+  elipsnorm(mus(:,i),covs(:,:,i),2);
+end
 
 hold off;
 

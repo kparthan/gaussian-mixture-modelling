@@ -1504,7 +1504,7 @@ void simulateMixtureModel(struct Parameters &parameters)
       data = original.generate(parameters.sample_size,save);
     }
     if (parameters.heat_map == SET && (parameters.D == 2 || parameters.D == 3)) {
-      original.generateHeatmapData(parameters.res,parameters.D);
+      original.generateHeatmapData(parameters.sample_size,parameters.res,parameters.D);
     }
   } else if (parameters.load_mixture == UNSET) {
     int k = parameters.simulated_components;
@@ -1635,7 +1635,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
     components = parent.getComponents();
     sample_size = parent.getSampleSize();
     K = components.size();
-    /*for (int i=0; i<K; i++) { // split() ...
+    for (int i=0; i<K; i++) { // split() ...
       if (sample_size[i] > MIN_N) {
         IGNORE_SPLIT = 0;
         modified = parent.split(i,log);
@@ -1643,7 +1643,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
           updateInference(modified,improved,N,log,SPLIT);
         }
       }
-    }*/
+    }
     if (K >= 2) {  // kill() ...
       for (int i=0; i<K; i++) {
         modified = parent.kill(i,log);
@@ -1657,7 +1657,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
         updateInference(modified,improved,N,log,JOIN);
       } // join() ing nearest components
     } // if (K > 1) loop
-    if (improved == parent) {
+    /*if (improved == parent) {
       for (int i=0; i<K; i++) { // split() ...
         if (sample_size[i] > MIN_N) {
           IGNORE_SPLIT = 0;
@@ -1667,7 +1667,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
           }
         }
       } // for()
-    }
+    }*/
     if (improved == parent) goto finish;
   } // if (improved == parent || iter%2 == 0) loop
 

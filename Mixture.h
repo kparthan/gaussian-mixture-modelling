@@ -174,7 +174,7 @@ class Mixture
     Mixture join(int, int, ostream &);
 
     //! Generate heat maps (for d=3)
-    void generateHeatmapData(long double, int);
+    void generateHeatmapData(int, long double, int);
 
     //! Get the nearest component
     int getNearestComponent(int);

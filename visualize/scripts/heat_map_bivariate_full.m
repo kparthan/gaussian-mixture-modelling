@@ -1,3 +1,4 @@
+%% redundant -- don't use
 % heat map whole region
 function [] = heat_map_bivariate_full()
 

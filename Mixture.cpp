@@ -353,7 +353,7 @@ void Mixture::initialize3()
         if (responsibility[i][j] > 0.99) {
           neff += 1;
           for (int k=0; k<D; k++) {
-            means[i][k] += data_weights[j] * data[j][k];
+            means[i][k] += data[j][k];
           } // for k
         } // if()
       } // for j
@@ -1185,7 +1185,6 @@ void Mixture::saveComponentData(int index, std::vector<Vector> &data)
 {
   string data_file = "./visualize/sampled_data/comp";
   data_file += boost::lexical_cast<string>(index+1) + ".dat";
-  //components[index].printParameters(cout);
   ofstream file(data_file.c_str());
   for (int j=0; j<data.size(); j++) {
     for (int k=0; k<data[0].size(); k++) {
@@ -1216,17 +1215,44 @@ std::vector<Vector> Mixture::generate(int num_samples, bool save_data)
     fw << sample_size[i] << endl;
   }
   fw.close();
+  
+  std::vector<std::vector<std::vector<long double> > > random_data;
   std::vector<Vector> sample;
   for (int i=0; i<K; i++) {
     std::vector<Vector> x = components[i].generate((int)sample_size[i]);
-    if (save_data) {
-      saveComponentData(i,x);
+    random_data.push_back(x);
+    for (int j=0; j<random_data[i].size(); j++) {
+      sample.push_back(random_data[i][j]);
     }
-    for (int j=0; j<x.size(); j++) {
-      sample.push_back(x[j]);
-    }
-  }
-  //return sample;
+  } // for i
+
+  if (save_data) {
+    writeToFile("random_sample.dat",sample);
+    string comp_density_file;
+    string mix_density_file = "./visualize/sampled_data/mixture_density.dat";
+    ofstream mix(mix_density_file.c_str());
+    long double comp_density,mix_density;
+    for (int i=0; i<K; i++) {
+      saveComponentData(i,random_data[i]);
+      comp_density_file = "./visualize/sampled_data/comp" 
+                          + boost::lexical_cast<string>(i+1) + "_density.dat";
+      ofstream comp(comp_density_file.c_str());
+      for (int j=0; j<random_data[i].size(); j++) {
+        comp_density = exp(components[i].log_density(random_data[i][j]));
+        mix_density = exp(log_probability(random_data[i][j]));
+        for (int k=0; k<random_data[i][j].size(); k++) {
+          comp << fixed << setw(10) << setprecision(3) << random_data[i][j][k];
+          mix << fixed << setw(10) << setprecision(3) << random_data[i][j][k];
+        } // k
+        comp << "\t\t" << scientific << comp_density << endl;
+        mix <<  "\t\t" << scientific << mix_density << endl;
+      } // j
+      comp.close();
+    } // i
+    mix.close();
+  } // if()
+  return sample;
+  // shuffle the sample
   /*for (size_t i = 0; i < num_samples; i++) {
     int idx1 = rand() % num_samples;
     int idx2 = rand() % num_samples;
@@ -1234,9 +1260,6 @@ std::vector<Vector> Mixture::generate(int num_samples, bool save_data)
     sample[idx1] = sample[idx2];
     sample[idx2] = tmp; 
   }*/
-  writeToFile("random_sample.dat",sample);
-  return sample;
-  // shuffle the sample
   /*std::vector<Vector> shuffled;
   std::vector<int> flags(num_samples,0);
   for (int i=0; i<num_samples; i++) {
@@ -1512,40 +1535,12 @@ Mixture Mixture::join(int c1, int c2, ostream &log)
  *  \brief This function generates data to visualize the 2D/3D heat maps.
  *  \param res a long double
  */
-void Mixture::generateHeatmapData(long double res, int D)
+void Mixture::generateHeatmapData(int N, long double res, int D)
 {
-  int N = 10000;
-  sample_size = Vector(K,0);
-  for (int i=0; i<N; i++) {
-    int k = randomComponent();
-    sample_size[k]++;
-  }
+  generate(N,1);
 
-  string mix_file = "./visualize/sampled_data/mixture_density.dat";
-  ofstream mix(mix_file.c_str());
-
-  long double comp_density,mix_density;
-  for (int i=0; i<K; i++) {
-    std::vector<Vector> x = components[i].generate(sample_size[i]);
-    string comp_file = "./visualize/sampled_data/comp" + boost::lexical_cast<string>(i+1) 
-                       + "_density.dat";
-    ofstream comp(comp_file.c_str());
-    for (int j=0; j<x.size(); j++) {
-      mix_density = exp(log_probability(x[j]));
-      comp_density = exp(components[i].log_density(x[j]));
-      for (int k=0; k<x[j].size(); k++) {
-        comp << fixed << setw(10) << setprecision(3) << x[j][k];
-        mix << fixed << setw(10) << setprecision(3) << x[j][k];
-      }
-      comp << fixed << setw(10) << setprecision(4) << comp_density * 100 << endl;
-      mix << fixed << setw(10) << setprecision(4) << mix_density * 100 << endl;
-    }
-    comp.close();
-  }
-  mix.close();
-
-  if (D == 2) {
-    string data_file = "./visualize/probability_density.dat";
+  /*if (D == 2) {
+    string data_file = "./visualize/sampled_data/probability_density.dat";
     ofstream file(data_file.c_str());
     long double MIN = -10, MAX = 10;
     long double x1,x2; 
@@ -1556,11 +1551,12 @@ void Mixture::generateHeatmapData(long double res, int D)
         mix_density = exp(log_probability(x));
         file << fixed << setw(10) << setprecision(3) << x[0];
         file << fixed << setw(10) << setprecision(3) << x[1];
-        file << fixed << setw(10) << setprecision(4) << mix_density * 100 << endl;
+        file << fixed << setw(10) << setprecision(4) << mix_density << endl;
       } // x2
     } // x1
     file.close();
   } // if()
+  */
 }
 
 /*!
