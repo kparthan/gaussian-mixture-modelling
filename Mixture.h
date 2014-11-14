@@ -182,7 +182,13 @@ class Mixture
     //! Computes the approx KL divergence between two mixtures
     long double computeKLDivergence(Mixture &);
 
-    bool verify(Mixture &);
+    long double computeKLDivergence(Mixture &, std::vector<Vector> &);
+
+    long double computeKLDivergenceUpperBound(Mixture &);
+
+    long double computeKLDivergenceLowerBound(Mixture &);
+
+    long double computeKLDivergenceAverageBound(Mixture &);
 };
 
 #endif

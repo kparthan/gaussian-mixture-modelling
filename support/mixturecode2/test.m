@@ -7,7 +7,7 @@ y = data'
 [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-4,0)
 
 % print the inferred mixture
-file = fopen('../../inferred_mixture_2','w');
+file = fopen('../../simulation/inferred_mixture_2','w');
 D = size(data,2);
 for k=1:bestk
   w = bestpp(k);
@@ -23,9 +23,9 @@ for k=1:bestk
   for i=1:D
     fprintf(file,'(');
     for j=1:D-1
-      fprintf(file,'%.3f, ',C(i,j));
+      fprintf(file,'%.6e, ',C(i,j));
     end
-    fprintf(file,'%.3f)',C(i,D));
+    fprintf(file,'%.6e)',C(i,D));
   end
   fprintf(file,')\n');
 end

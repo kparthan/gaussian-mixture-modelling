@@ -31,6 +31,10 @@ struct Parameters
   int num_threads;          // flag to enable multithreading
   long double max_kappa;    // max value of kappa allowed
   int start_from;           // starting value of number of components during inference
+  int comparison;           // to compare mixtures
+  string true_mixture;
+  string other_mixture;
+  string random_sample;
 };
 
 //! parameters associated with estimation
@@ -111,6 +115,7 @@ void jacobiRotateMatrix(Matrix &, Matrix &, int, int);
 Vector generateRandomUnitVector(int);
 long double computeEuclideanDistance(Vector &, Vector &);
 long double computeLogMultivariateGamma(int, long double);
+bool verify(Matrix &);
 
 // mixture functions
 Vector generateFromSimplex(int);
@@ -121,6 +126,7 @@ bool gatherData(struct Parameters &, std::vector<Vector> &);
 void modelOneComponent(struct Parameters &, std::vector<Vector> &);
 void modelMixture(struct Parameters &, std::vector<Vector> &);
 void simulateMixtureModel(struct Parameters &);
+void compareMixtures(struct Parameters &);
 void strategic_inference(struct Parameters &, Mixture &, std::vector<Vector> &);
 Mixture inferComponents(Mixture &, int, int, ostream &);
 Mixture inferComponentsProbabilistic(Mixture &, int, int, ostream &);

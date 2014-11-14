@@ -16,6 +16,8 @@
 #include <omp.h>
 
 #define BOOST_UBLAS_NDEBUG 1 
+//#define BOOST_UBLAS_TYPE_CHECK_MIN 1e-6
+//#define BOOST_UBLAS_TYPE_CHECK_EPSILON 1e-6
 
 #include <boost/program_options.hpp>
 #include <boost/lexical_cast.hpp>
@@ -61,7 +63,7 @@ typedef boost::numeric::ublas::zero_matrix<long double> ZeroMatrix;
 #define UNSET 0
 
 #define R1 10
-#define R2 2 
+#define R2 5 
 
 #define ML 0
 #define MML 1

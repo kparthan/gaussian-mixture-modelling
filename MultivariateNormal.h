@@ -30,6 +30,8 @@ class MultivariateNormal
 
     void printParameters(ostream &);
 
+    void printParameters(ostream &, int);
+
     std::vector<Vector> generate(int);
 
     void computeAllEstimators(std::vector<Vector> &, struct Estimates &, int verbose = 0);
@@ -66,7 +68,11 @@ class MultivariateNormal
 
     long double computeLogFisherInformation(long double);
 
+    long double entropy();
+
     long double computeKLDivergence(MultivariateNormal &);
+
+    MultivariateNormal conflate(MultivariateNormal &);
 };
 
 #endif

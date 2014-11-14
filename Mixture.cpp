@@ -1581,3 +1581,149 @@ int Mixture::getNearestComponent(int c)
   return nearest;
 }
 
+/*!
+ *  \brief Computes the KL-divergence between two mixtures
+ */
+long double Mixture::computeKLDivergence(Mixture &other)
+{
+  return computeKLDivergence(other,data);
+}
+
+// Monte Carlo
+long double Mixture::computeKLDivergence(Mixture &other, std::vector<Vector> &sample)
+{
+  long double kldiv = 0,log_fx,log_gx;
+  for (int i=0; i<sample.size(); i++) {
+    log_fx = log_probability(sample[i]);
+    log_gx = other.log_probability(sample[i]);
+    kldiv += (log_fx - log_gx);
+  }
+  return kldiv/(log(2) * sample.size());
+}
+
+long double Mixture::computeKLDivergenceUpperBound(Mixture &other)
+{
+  Vector other_weights = other.getWeights();
+  std::vector<MultivariateNormal> other_components = other.getComponents();
+  int K2 = other_weights.size();
+
+  // upper bounds
+  long double log_cd1,log_cd2,log_cd,log_constant;
+  Vector empty(K,0);
+
+  std::vector<Vector> conflated_same(K,empty);
+  for (int i=0; i<K; i++) {
+    //log_cd1 = components[i].getLogNormalizationConstant();
+    for (int j=0; j<K; j++) {
+      //log_cd2 = components[j].getLogNormalizationConstant();
+      MultivariateNormal conflated = components[i].conflate(components[j]);
+      log_cd = conflated.getLogNormalizationConstant();
+      //log_constant = log_cd1 + log_cd2 - log_cd;
+      conflated_same[i][j] = exp(log_cd);
+    } // j
+  } // i
+
+  long double kldiv;
+  empty = Vector(K2,0);
+  std::vector<Vector> exp_kldiv_diff(K,empty);
+  for (int i=0; i<K; i++) {
+    for (int j=0; j<K2; j++) {
+      kldiv = components[i].computeKLDivergence(other_components[j]);
+      exp_kldiv_diff[i][j] = exp(-kldiv);
+    } // j
+  } // i
+
+  long double kl_upper_bound = 0;
+  long double num,denom,diff;
+  for (int i=0; i<K; i++) {
+    num = 0;
+    for (int j=0; j<K; j++) {
+      num += (weights[i] * conflated_same[i][j]);
+    }
+    denom = 0;
+    for (int j=0; j<K2; j++) {
+      denom += (other_weights[j] * exp_kldiv_diff[i][j]);
+    }
+    diff = log(num) - log(denom);
+    kl_upper_bound += (weights[i] * diff);
+  }
+
+  long double ent;
+  for (int i=0; i<K; i++) {
+    ent = components[i].entropy();
+    kl_upper_bound += (weights[i] * ent);
+  }
+
+  return kl_upper_bound;
+}
+
+long double Mixture::computeKLDivergenceLowerBound(Mixture &other)
+{
+  Vector other_weights = other.getWeights();
+  std::vector<MultivariateNormal> other_components = other.getComponents();
+  int K2 = other_weights.size();
+
+  // lower bounds
+  long double kldiv;
+  Vector empty(K,0);
+
+  std::vector<Vector> exp_kldiv_same(K,empty);
+  for (int i=0; i<K; i++) {
+    for (int j=0; j<K; j++) {
+      if (i != j) {
+        kldiv = components[i].computeKLDivergence(components[j]);
+        exp_kldiv_same[i][j] = exp(-kldiv);
+      } else if (i == j) {
+        exp_kldiv_same[i][j] = 1;
+      }
+    } // j
+  } // i
+
+  long double log_cd1,log_cd2,log_cd,log_constant;
+  empty = Vector(K2,0);
+  std::vector<Vector> conflated_diff(K,empty);
+  for (int i=0; i<K; i++) {
+    //log_cd1 = components[i].getLogNormalizationConstant();
+    for (int j=0; j<K2; j++) {
+      //log_cd2 = other_components[j].getLogNormalizationConstant();
+      MultivariateNormal conflated = components[i].conflate(other_components[j]);
+      log_cd = conflated.getLogNormalizationConstant();
+      //log_constant = log_cd1 + log_cd2 - log_cd;
+      conflated_diff[i][j] = exp(log_cd);
+    } // j
+  } // i
+
+  long double kl_lower_bound = 0;
+  long double num,denom,diff;
+  for (int i=0; i<K; i++) {
+    num = 0;
+    for (int j=0; j<K; j++) {
+      num += (weights[i] * exp_kldiv_same[i][j]);
+    }
+    denom = 0;
+    for (int j=0; j<K2; j++) {
+      denom += (other_weights[j] * conflated_diff[i][j]);
+    }
+    diff = log(num) - log(denom);
+    kl_lower_bound += (weights[i] * diff);
+  }
+
+  long double ent;
+  for (int i=0; i<K; i++) {
+    ent = components[i].entropy();
+    kl_lower_bound -= (weights[i] * ent);
+  }
+
+  if (kl_lower_bound < 0) return 0;
+  else return kl_lower_bound;
+}
+
+long double Mixture::computeKLDivergenceAverageBound(Mixture &other)
+{
+  long double upper = computeKLDivergenceUpperBound(other);
+  long double lower = computeKLDivergenceLowerBound(other);
+  cout << "upper bound: " << upper << endl;
+  cout << "lower bound: " << lower << endl;
+  return 0.5 * (upper + lower) / log(2);
+}
+

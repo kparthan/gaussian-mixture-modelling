@@ -15,6 +15,7 @@ MultivariateNormal::MultivariateNormal()
 MultivariateNormal::MultivariateNormal(Vector &mu, Matrix &cov) : mu(mu), cov(cov)
 {
   D = mu.size();
+  assert(verify(cov) == 1);
   updateConstants();
 }
 
@@ -27,11 +28,11 @@ void MultivariateNormal::updateConstants()
     cout << "cov: " << cov << endl;
     cout << "inverse: " << cov_inv << endl;
     cout << "det_cov: " << det_cov << endl;
-    if (fabs(det_cov) < 1e-6) {
+    /*if (fabs(det_cov) < 1e-6) {
       det_cov = fabs(det_cov);
-    }
+    }*/
   }
-  //assert(det_cov > 0);
+  assert(det_cov > 0);
   det_cov = fabs(det_cov);
 
   /*long double MIN_SIGMA = AOM;
@@ -88,6 +89,21 @@ void MultivariateNormal::printParameters(ostream &os)
       os << fixed << setprecision(3) << cov(i,j) << ", ";
     }
     os << fixed << setprecision(3) << cov(i,D-1) << ")";
+  }
+  os << ")" << endl;
+}
+
+void MultivariateNormal::printParameters(ostream &os, int set)
+{
+  os << "[mu]: "; print(os,mu,3);
+  os << "\t[cov]: (";
+  os << fixed << setprecision(6); 
+  for (int i=0; i<D; i++) {
+    os << "(";
+    for (int j=0; j<D-1; j++) {
+      os << scientific << cov(i,j) << ", ";
+    }
+    os << scientific << cov(i,D-1) << ")";
   }
   os << ")" << endl;
 }
@@ -367,6 +383,15 @@ long double MultivariateNormal::computeLogFisherInformation(long double Neff)
   return log_fisher;
 }
 
+long double MultivariateNormal::entropy()
+{
+  long double ans = 1 + log(2*PI);
+  ans *= D;
+  ans += log(det_cov);
+  ans *= 0.5;
+  return ans;
+}
+
 long double MultivariateNormal::computeKLDivergence(MultivariateNormal &other)
 {
   long double log_cd2 = other.getLogNormalizationConstant();
@@ -384,6 +409,31 @@ long double MultivariateNormal::computeKLDivergence(MultivariateNormal &other)
   tmp += prod_vMv(diff_mu,cov2_inv);
   tmp -= D;
   kldiv += (0.5 * tmp);
-  return kldiv / log(2);
+  return kldiv;
+}
+
+MultivariateNormal MultivariateNormal::conflate(MultivariateNormal &other)
+{
+  Vector mu2 = other.Mean();
+  Matrix cov2 = other.Covariance();
+
+  Matrix sum = cov + cov2;
+  Matrix sum_inv = ZeroMatrix(D,D);
+  long double det = 1;
+  invertMatrix(sum,sum_inv,det);
+
+  Matrix tmp;
+  tmp = prod(cov,sum_inv);
+  Matrix cov3 = prod(tmp,cov2);
+
+  Vector tmp2 = prod(sum_inv,mu);
+  Vector tmp3 = prod(cov2,tmp2);
+  Vector tmp4 = prod(sum_inv,mu2);
+  Vector tmp5 = prod(cov,tmp4);
+  Vector mu3(D,0);
+  for (int i=0; i<D; i++) {
+    mu3[i] = tmp3[i] + tmp5[i];
+  }
+  return MultivariateNormal(mu3,cov3);
 }
 

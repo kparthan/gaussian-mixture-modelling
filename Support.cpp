@@ -68,6 +68,9 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
        ("parallelize",value<string>(&parallelize),"section of the code to parallelize")
        ("improvement",value<long double>(&improvement_rate),"improvement rate")
        ("estimate",value<string>(&estimation_method),"ML/MML")
+       ("compare","mixture comparison")
+       ("true",value<string>(&parameters.true_mixture),"true mixture file")
+       ("other",value<string>(&parameters.other_mixture),"other mixture file")
   ;
   variables_map vm;
   store(command_line_parser(argc,argv).options(desc).run(),vm);
@@ -160,6 +163,17 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
     MIXTURE_SIMULATION = UNSET;
   }
 
+  if (vm.count("compare")) {
+    parameters.comparison = SET;
+    if (!vm.count("profile")) { // should generate random data first
+      if (!vm.count("samples")) {
+        parameters.sample_size = DEFAULT_SAMPLE_SIZE;
+      }
+    }
+  } else {
+    parameters.comparison = UNSET;
+  }
+
   if (vm.count("mt")) {
     NUM_THREADS = parameters.num_threads;
     ENABLE_DATA_PARALLELISM = SET;
@@ -171,7 +185,7 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
   if (vm.count("improvement")) {
     IMPROVEMENT_RATE = improvement_rate;
   } else {
-    IMPROVEMENT_RATE = 0.0001; // 0.01 % default
+    IMPROVEMENT_RATE = 0.00001; // 0.01 % default
   }
 
   ESTIMATION = MML;
@@ -1107,6 +1121,7 @@ bool invertMatrix(const Matrix &input, Matrix &inverse, long double &det)
     return false;
   }
 
+  //cout << "A: " << A << endl; 
   det = 1;
   for (int i=0; i<A.size1(); i++) {
     det *= A(i,i);
@@ -1288,6 +1303,22 @@ long double computeLogMultivariateGamma(int p, long double a)
     ans += boost::math::lgamma<long double>(x);
   }
   return ans;
+}
+
+bool verify(Matrix &m)
+{
+  int d = m.size1();
+  for (int i=0; i<d; i++) {
+    for (int j=i+1; j<d; j++) {
+      if (fabs(m(i,j)-m(j,i)) >= TOLERANCE) {
+        cout << "Error: Matrix is not symmetric ...\n";
+        cout << "m: " << m << endl;
+        cout << "m(" << i << "," << j << ") != m(" << j << "," << i << ")\n";
+        return 0;
+      }
+    }
+  }
+  return 1;
 }
 
 ////////////////////// MIXTURE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -1531,6 +1562,29 @@ void simulateMixtureModel(struct Parameters &parameters)
   }
 }
 
+void compareMixtures(struct Parameters &parameters)
+{
+  Mixture original,other;
+  original.load(parameters.true_mixture,parameters.D);
+  other.load(parameters.other_mixture,parameters.D);
+
+  std::vector<Vector> data;
+  if (parameters.read_profiles == SET) {
+    bool success = gatherData(parameters,data);
+    if (!success) {
+      cout << "Error in reading data...\n";
+      exit(1);
+    }
+  } else if (parameters.read_profiles == UNSET) {
+    data = original.generate(parameters.sample_size,1);
+  }
+
+  long double kldiv1 = original.computeKLDivergence(other,data);
+  cout << "kldiv1: " << kldiv1 << endl;
+  long double kldiv2 = original.computeKLDivergenceAverageBound(other);
+  cout << "kldiv2: " << kldiv2 << endl;
+}
+
 void strategic_inference(
   struct Parameters &parameters, 
   Mixture &mixture, 
@@ -1543,6 +1597,17 @@ void strategic_inference(
       Mixture stable = inferComponents(mixture,data.size(),data[0].size(),log);
       cout << "# of components: " << stable.getNumberOfComponents() << endl;
       log.close();
+      string ans = "./simulation/inferred_mixture_1";
+      ofstream out(ans.c_str());
+      Vector weights = stable.getWeights();
+      std::vector<MultivariateNormal> components = stable.getComponents();
+      for (int k=0; k<components.size(); k++) {
+        out << "\t" << fixed << setw(10) << setprecision(5) << weights[k];
+        out << "\t";
+        //components[k].printParameters(out);
+        components[k].printParameters(out,1);
+      }
+      out.close();
       break;
     }
 
@@ -1635,7 +1700,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
     components = parent.getComponents();
     sample_size = parent.getSampleSize();
     K = components.size();
-    for (int i=0; i<K; i++) { // split() ...
+    /*for (int i=0; i<K; i++) { // split() ...
       if (sample_size[i] > MIN_N) {
         IGNORE_SPLIT = 0;
         modified = parent.split(i,log);
@@ -1643,7 +1708,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
           updateInference(modified,improved,N,log,SPLIT);
         }
       }
-    }
+    }*/
     if (K >= 2) {  // kill() ...
       for (int i=0; i<K; i++) {
         modified = parent.kill(i,log);
@@ -1657,7 +1722,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
         updateInference(modified,improved,N,log,JOIN);
       } // join() ing nearest components
     } // if (K > 1) loop
-    /*if (improved == parent) {
+    if (improved == parent) {
       for (int i=0; i<K; i++) { // split() ...
         if (sample_size[i] > MIN_N) {
           IGNORE_SPLIT = 0;
@@ -1667,7 +1732,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
           }
         }
       } // for()
-    }*/
+    }
     if (improved == parent) goto finish;
   } // if (improved == parent || iter%2 == 0) loop
 

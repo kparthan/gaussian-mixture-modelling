@@ -5,6 +5,8 @@ extern UniformRandomNumberGenerator *uniform_generator;
 
 int main(int argc, char **argv)
 {
+
+  //cout << "boost eps: " << BOOST_UBLAS_TYPE_CHECK_EPSILON << endl;
   srand(time(NULL));
   UniformReal uniform_distribution(0,1);
   RandomNumberGenerator generator;
@@ -22,12 +24,17 @@ int main(int argc, char **argv)
     RunExperiments(parameters.iterations);
   }
 
-  if (parameters.read_profiles == SET && parameters.simulation == UNSET) {
+  if (parameters.read_profiles == SET && parameters.simulation == UNSET
+       && parameters.comparison == UNSET) {
     computeEstimators(parameters);
   } 
 
-  if (parameters.simulation == SET) {
+  if (parameters.simulation == SET && parameters.comparison == UNSET) {
     simulateMixtureModel(parameters);
+  }
+
+  if (parameters.comparison == SET) {
+    compareMixtures(parameters);
   }
 
   delete(uniform_generator);
