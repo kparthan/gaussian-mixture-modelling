@@ -20,6 +20,7 @@ int IGNORE_SPLIT;
 long double MIN_N;
 int STRATEGY;
 int MSGLEN_FAIL;
+int TERMINATE = 0;
 
 ////////////////////// GENERAL PURPOSE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -169,6 +170,12 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
       if (!vm.count("samples")) {
         parameters.sample_size = DEFAULT_SAMPLE_SIZE;
       }
+    }
+    parameters.comparison_type = BOUNDS;  // default
+    if(vm.count("mc")) {
+      parameters.comparison_type = MC;
+    } else if (vm.count("bounds")) {
+      parameters.comparison_type = BOUNDS;
     }
   } else {
     parameters.comparison = UNSET;
@@ -1566,7 +1573,6 @@ void compareMixtures(struct Parameters &parameters)
 {
   Mixture original,other;
   original.load(parameters.true_mixture,parameters.D);
-  other.load(parameters.other_mixture,parameters.D);
 
   std::vector<Vector> data;
   if (parameters.read_profiles == SET) {
@@ -1579,10 +1585,19 @@ void compareMixtures(struct Parameters &parameters)
     data = original.generate(parameters.sample_size,1);
   }
 
+  //int sample_size = 1e6;
+  //data = original.generate(sample_size,1);
+  Vector dw(data.size(),1);
+  other.load(parameters.other_mixture,parameters.D,data,dw);
+  original.load(parameters.true_mixture,parameters.D,data,dw);
   long double kldiv1 = original.computeKLDivergence(other,data);
   cout << "kldiv1: " << kldiv1 << endl;
   long double kldiv2 = original.computeKLDivergenceAverageBound(other);
   cout << "kldiv2: " << kldiv2 << endl;
+  long double msg1 = original.computeMinimumMessageLength();
+  cout << "msg1: " << msg1 << endl;
+  long double msg2 = other.computeMinimumMessageLength();
+  cout << "msg2: " << msg2 << endl;
 }
 
 void strategic_inference(
@@ -1679,6 +1694,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
   std::vector<MultivariateNormal> components;
   Mixture modified,improved,parent;
   Vector sample_size;
+  std::vector<Mixture> splits;
 
   if (D >= 10) {
     MIN_N = 2 * (D + 3);
@@ -1723,16 +1739,39 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
       } // join() ing nearest components
     } // if (K > 1) loop
     if (improved == parent) {
+      splits.clear();
       for (int i=0; i<K; i++) { // split() ...
         if (sample_size[i] > MIN_N) {
           IGNORE_SPLIT = 0;
           modified = parent.split(i,log);
+          splits.push_back(modified);
           if (IGNORE_SPLIT == 0) {
             updateInference(modified,improved,N,log,SPLIT);
           }
         }
       } // for()
     }
+    /*if (improved == parent && TERMINATE == 1) goto finish;
+    if (improved == parent && TERMINATE == 0) {
+      TERMINATE = 1;
+      Mixture best_split = splits[0];
+      long double best_msglen = best_split.getMinimumMessageLength();
+      for (int i=1; i<splits.size(); i++) {
+        if (splits[i].getMinimumMessageLength() < best_msglen) {
+          best_msglen = splits[i].getMinimumMessageLength();
+          best_split = splits[i];
+        }
+      }
+      log << "Trying a not so good split ...\n\n";
+      Mixture new_mix = inferComponents(best_split,N,D,log);
+      if (new_mix.getMinimumMessageLength() < parent.getMinimumMessageLength()) {
+        log << "success\n";
+        Mixture new_mix2 = inferComponents(new_mix,N,D,log);
+        if (new_mix2.getNumberOfComponents() > new_mix.getNumberOfComponents() && new_mix2.getMinimumMessageLength() < best_split.getMinimumMessageLength()) {
+          return new_mix2;
+       } else return new_mix; 
+      }
+    }*/ 
     if (improved == parent) goto finish;
   } // if (improved == parent || iter%2 == 0) loop
 

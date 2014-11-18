@@ -84,5 +84,8 @@ typedef boost::numeric::ublas::zero_matrix<long double> ZeroMatrix;
 #define ACCEPT_BEST_ITER 2
 #define ACCEPT_LAST_SPLIT 3
 
+#define MC 1
+#define BOUNDS 2
+
 #endif
 

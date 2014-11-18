@@ -1714,16 +1714,17 @@ long double Mixture::computeKLDivergenceLowerBound(Mixture &other)
     kl_lower_bound -= (weights[i] * ent);
   }
 
-  if (kl_lower_bound < 0) return 0;
-  else return kl_lower_bound;
+  //if (kl_lower_bound < 0) return 0;
+  //else return kl_lower_bound;
+  return kl_lower_bound;
 }
 
 long double Mixture::computeKLDivergenceAverageBound(Mixture &other)
 {
-  long double upper = computeKLDivergenceUpperBound(other);
-  long double lower = computeKLDivergenceLowerBound(other);
+  long double upper = computeKLDivergenceUpperBound(other) / log(2);
+  long double lower = computeKLDivergenceLowerBound(other) / log(2);
   cout << "upper bound: " << upper << endl;
   cout << "lower bound: " << lower << endl;
-  return 0.5 * (upper + lower) / log(2);
+  return 0.5 * (upper + lower);
 }
 

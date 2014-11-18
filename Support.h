@@ -32,6 +32,7 @@ struct Parameters
   long double max_kappa;    // max value of kappa allowed
   int start_from;           // starting value of number of components during inference
   int comparison;           // to compare mixtures
+  int comparison_type;
   string true_mixture;
   string other_mixture;
   string random_sample;
