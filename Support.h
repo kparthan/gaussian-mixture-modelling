@@ -85,6 +85,7 @@ void setEstimationMethod(int);
 void TestFunctions();
 void RunExperiments(int);
 std::vector<std::vector<TwoPairs> > generatePairs(int);
+void deal_with_improper_covariances(Matrix &, Matrix &, long double &);
 
 // geometry functions
 std::vector<Vector> load_matrix(string &, int);
@@ -111,6 +112,8 @@ std::vector<Vector> transform(std::vector<Vector> &, Matrix &);
 int determinant_sign(const permutation_matrix<std::size_t> &);
 bool invertMatrix(const Matrix &, Matrix &, long double &);
 bool invertMatrix(const Matrix &, Matrix &);
+//lcb::Matrix<long double> convert_to_lcb_matrix(Matrix &);
+//Matrix convert_to_ublas_matrix(lcb::Matrix<long double> &);
 void eigenDecomposition(Matrix, Vector &, Matrix &);
 void jacobiRotateMatrix(Matrix &, Matrix &, int, int);
 Vector generateRandomUnitVector(int);

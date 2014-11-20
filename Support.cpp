@@ -292,19 +292,19 @@ void initializeMatrix(std::vector<Vector> &matrix, int rows, int cols)
  */
 void print(ostream &os, Vector &v, int precision)
 {
-  if (precision == 0) {
+  if (precision == 0) { // scientific notation
     if (v.size() == 1) {
-      os << scientific << "(" << v[0] << ")";
+      os << scientific << setprecision(6) << "(" << v[0] << ")";
     } else if (v.size() > 1) {
-      os << scientific << "(" << v[0] << ", ";
+      os << scientific <<  setprecision(6) <<"(" << v[0] << ", ";
       for (int i=1; i<v.size()-1; i++) {
-        os << scientific << v[i] << ", ";
+        os << scientific << setprecision(6) << v[i] << ", ";
       }
-      os << scientific << v[v.size()-1] << ")\t";
+      os << scientific << setprecision(6) << v[v.size()-1] << ")\t";
     } else {
       os << "No elements in v ...";
     }
-  } else if (precision != 0) { // scientific notation
+  } else if (precision != 0) { 
     if (v.size() == 1) {
       os << fixed << setprecision(3) << "(" << v[0] << ")";
     } else if (v.size() > 1) {
@@ -707,6 +707,17 @@ std::vector<std::vector<TwoPairs> > generatePairs(int D)
   return table;
 }
 
+void deal_with_improper_covariances(Matrix &A, Matrix &inv, long double &det)
+{
+  int D = A.size1();
+  Vector eigen_values(D,0);
+  Matrix eigen_vectors = IdentityMatrix(D,D);
+  eigenDecomposition(A,eigen_values,eigen_vectors);
+
+  cout << "eigen_values: "; print(cout,eigen_values,0); cout << endl;
+  cout << "eigen_vectors: " << eigen_vectors << endl;
+}
+
 ////////////////////// GEOMETRY FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 // not unit vectors ...
@@ -1097,6 +1108,66 @@ std::vector<Vector> transform(std::vector<Vector> &x, Matrix &T)
   }
   return y;
 }
+
+// liblcb inverse()
+/*bool invertMatrix(const Matrix &input, Matrix &inverse, long double &det)
+{
+  Matrix A(input);
+
+  // convert 'A' to lcb::Matrix
+  lcb::Matrix<long double> lcb_matrix = convert_to_lcb_matrix(A);
+  det = lcb_matrix.determinant();
+
+  lcb::Matrix<long double> lcb_inv = lcb_matrix.inverse();
+
+  inverse = convert_to_ublas_matrix(lcb_inv);
+
+  return true;
+}
+
+// liblcb inverse()
+bool invertMatrix(const Matrix &input, Matrix &inverse)
+{
+  Matrix A(input);
+
+  // convert 'A' to lcb::Matrix
+  lcb::Matrix<long double> lcb_matrix = convert_to_lcb_matrix(A);
+  lcb::Matrix<long double> lcb_inv = lcb_matrix.inverse();
+
+  inverse = convert_to_ublas_matrix(lcb_inv);
+
+  return true;
+}
+
+lcb::Matrix<long double> convert_to_lcb_matrix(Matrix &ublas_matrix)
+{
+  int rows = ublas_matrix.size1();
+  int cols = ublas_matrix.size2();
+
+  lcb::Matrix<long double> lcb_matrix(rows,cols);
+  for (int i=0; i<rows; i++) {
+    for (int j=0; j<cols; j++) {
+      lcb_matrix[i][j] = ublas_matrix(i,j);
+    }
+  }
+
+  return lcb_matrix;
+}
+
+Matrix convert_to_ublas_matrix(lcb::Matrix<long double> &lcb_matrix)
+{
+  int rows = lcb_matrix.rows();
+  int cols = lcb_matrix.columns();
+
+  Matrix ublas_matrix = ZeroMatrix(rows,cols);
+  for (int i=0; i<rows; i++) {
+    for (int j=0; j<cols; j++) {
+      ublas_matrix(i,j) = lcb_matrix[i][j];
+    }
+  }
+
+  return ublas_matrix;
+}*/
 
 // computes the determinant as well
 int determinant_sign(const permutation_matrix<std::size_t> &pm)
@@ -1591,12 +1662,12 @@ void compareMixtures(struct Parameters &parameters)
   other.load(parameters.other_mixture,parameters.D,data,dw);
   original.load(parameters.true_mixture,parameters.D,data,dw);
   long double kldiv1 = original.computeKLDivergence(other,data);
-  cout << "kldiv1: " << kldiv1 << endl;
+  cout << "kldiv (data): " << kldiv1 << endl;
   long double kldiv2 = original.computeKLDivergenceAverageBound(other);
-  cout << "kldiv2: " << kldiv2 << endl;
-  long double msg1 = original.computeMinimumMessageLength();
+  cout << "kldiv (bound): " << kldiv2 << endl;
+  long double msg1 = original.computeMinimumMessageLength(0);
   cout << "msg1: " << msg1 << endl;
-  long double msg2 = other.computeMinimumMessageLength();
+  long double msg2 = other.computeMinimumMessageLength(0);
   cout << "msg2: " << msg2 << endl;
 }
 
@@ -1696,12 +1767,12 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
   Vector sample_size;
   std::vector<Mixture> splits;
 
-  if (D >= 10) {
+  /*if (D >= 10) {
     MIN_N = 2 * (D + 3);
   } else {
     MIN_N = D + 3;
-  }
-  MIN_N = D + 3;
+  }*/
+  MIN_N = (D + 3);
 
   improved = mixture;
   TOTAL_ITERATIONS = 0;

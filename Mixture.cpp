@@ -315,8 +315,6 @@ void Mixture::initialize2()
 
 void Mixture::initialize3()
 {
-  cout << "Sample size: " << N << endl;
-
   int trials=0,max_trials = 5;
   repeat:
   // choose K random means by choosing K random points
@@ -370,11 +368,11 @@ void Mixture::initialize3()
       responsibility[nearest][i] = 1;
     }
   } // iter
-  cout << "init_means: ";
+  //cout << "init_means: ";
   for (int i=0; i<K; i++) {
     print(cout,init_means[i],3);
   }
-  cout << "\nk_means: ";
+  //cout << "\nk_means: ";
   for (int i=0; i<K; i++) {
     print(cout,means[i],3);
   } cout << endl;
@@ -725,7 +723,7 @@ long double Mixture::negativeLogLikelihood(std::vector<Vector> &sample)
  *  model parameters.
  *  \return the minimum message length
  */
-long double Mixture::computeMinimumMessageLength()
+long double Mixture::computeMinimumMessageLength(int verbose /* default = 1 (print) */)
 {
   MSGLEN_FAIL = 0;
   part1 = 0;
@@ -738,7 +736,7 @@ long double Mixture::computeMinimumMessageLength()
   //long double Ik = log(MAX_COMPONENTS);
   Ik = K;
   //Ik = log(MAX_COMPONENTS) / log(2);
-  cout << "Ik: " << Ik << endl;
+  //cout << "Ik: " << Ik << endl;
 
   // enocde the weights
   Iw = ((K-1)/2.0) * log(N);
@@ -747,7 +745,7 @@ long double Mixture::computeMinimumMessageLength()
     Iw -= 0.5 * log(weights[i]);
   }
   Iw /= log(2);
-  cout << "Iw: " << Iw << endl;
+  //cout << "Iw: " << Iw << endl;
   //assert(Iw >= 0);
 
   // encode the parameters of the components
@@ -760,7 +758,7 @@ long double Mixture::computeMinimumMessageLength()
     It.push_back(logp);
     sum_It += logp;
   }
-  cout << "It: " << sum_It << endl;
+  //cout << "It: " << sum_It << endl;
   /*if (It <= 0) { cout << It << endl;}
   fflush(stdout);
   assert(It > 0);*/
@@ -780,7 +778,7 @@ long double Mixture::computeMinimumMessageLength()
   long double Il_partial = negativeLogLikelihood(data);
   Il = Il_partial - (D * N * log(AOM));
   Il /= log(2);
-  cout << "Il: " << Il << endl;
+  //cout << "Il: " << Il << endl;
   //assert(Il > 0);
   if (Il < 0 || boost::math::isnan(Il)) {
     minimum_msglen = LARGE_NUMBER;
@@ -793,6 +791,13 @@ long double Mixture::computeMinimumMessageLength()
   part2 = Il + constant;
 
   minimum_msglen = part1 + part2;
+
+  if (verbose == 1) {
+    cout << "Ik: " << Ik << endl;
+    cout << "Iw: " << Iw << endl;
+    cout << "It: " << sum_It << endl;
+    cout << "Il: " << Il << endl;
+  }
 
   return minimum_msglen;
 }

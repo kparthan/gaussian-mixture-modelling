@@ -28,26 +28,10 @@ void MultivariateNormal::updateConstants()
     cout << "cov: " << cov << endl;
     cout << "inverse: " << cov_inv << endl;
     cout << "det_cov: " << det_cov << endl;
-    /*if (fabs(det_cov) < 1e-6) {
-      det_cov = fabs(det_cov);
-    }*/
+    deal_with_improper_covariances(cov,cov_inv,det_cov);
   }
   assert(det_cov > 0);
   det_cov = fabs(det_cov);
-
-  /*long double MIN_SIGMA = AOM;
-  if (det_cov < 0 || fabs(det_cov) < 1e-12) {
-    long double min_var = MIN_SIGMA * MIN_SIGMA;
-    Matrix I = IdentityMatrix(D,D);
-    cov = min_var * I;
-    cov_inv = I / min_var;
-    det_cov = min_var * min_var;
-  }*/
-  /*if (det_cov < 0) {
-    cout << "cov: " << cov << endl;
-    cout << "det_cov: " << det_cov << endl;
-  }
-  assert(det_cov > 0);*/
 
   log_cd = computeLogNormalizationConstant();
 }
@@ -95,7 +79,7 @@ void MultivariateNormal::printParameters(ostream &os)
 
 void MultivariateNormal::printParameters(ostream &os, int set)
 {
-  os << "[mu]: "; print(os,mu,3);
+  os << "[mu]: "; print(os,mu,0);
   os << "\t[cov]: (";
   os << fixed << setprecision(6); 
   for (int i=0; i<D; i++) {
@@ -210,7 +194,12 @@ void MultivariateNormal::estimateCovariance(
       break;
 
     case MML:
-      estimates.cov_mml = S / (estimates.Neff - 1);
+      if (estimates.Neff <= 1) {
+        cout << "Neff: " << estimates.Neff << " <= 1" << endl;
+        estimates.cov_mml = S / estimates.Neff;
+      } else {
+        estimates.cov_mml = S / (estimates.Neff - 1);
+      }
       break;
 
     case BOTH:
@@ -232,6 +221,7 @@ void MultivariateNormal::updateParameters(struct Estimates &estimates)
       cov = estimates.cov_mml;
       break;
   }
+  //cout << "Neff: " << estimates.Neff << endl;
   updateConstants();
 }
 

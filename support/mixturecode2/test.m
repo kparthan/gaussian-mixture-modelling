@@ -16,9 +16,9 @@ for k=1:bestk
   fprintf(file,'\t%.5f\t\t',w);
   fprintf(file,'[mu]: (');
   for i=1:D-1
-    fprintf(file,'%.3f, ',mu(i,1));
+    fprintf(file,'%.6e, ',mu(i,1));
   end
-  fprintf(file,'%.3f)',mu(D,1));
+  fprintf(file,'%.6e)',mu(D,1));
   fprintf(file,'\t\t[cov]: (');
   for i=1:D
     fprintf(file,'(');

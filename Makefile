@@ -5,8 +5,9 @@
 #CFLAGS=-std=c++98 -c -O3 -I/home/parthan/external_libs/ -fopenmp 
 #LDFLAGS=-static -lboost_program_options -lboost_filesystem -fopenmp -lm
 
-CFLAGS=-std=c++0x -c -O3 -fopenmp
-#CFLAGS=-std=c++0x -g -c -fopenmp
+#CFLAGS=-std=c++11 -c -O3 -fopenmp $(shell pkg-config --cflags liblcb-experimental)
+CFLAGS=-std=c++11 -c -O3 -fopenmp 
+#CFLAGS=-std=c++11x -g -c -fopenmp
 LDFLAGS=-lboost_program_options -lboost_system -lboost_filesystem -fopenmp -lm 
 
 OBJECTS = main.o \

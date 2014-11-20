@@ -119,7 +119,7 @@ class Mixture
     long double negativeLogLikelihood(std::vector<Vector> &);
 
     //! Computes the minimum message length
-    long double computeMinimumMessageLength();
+    long double computeMinimumMessageLength(int verbose = 0);
 
     void printIndividualMsgLengths(ostream &);
 
