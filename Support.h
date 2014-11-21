@@ -56,6 +56,7 @@ void Usage (const char *, options_description &);
 bool checkFile(string &);
 void writeToFile(const char *, std::vector<Vector> &, int);
 void writeToFile(const char *, std::vector<Vector> &);
+void writeToFile(string &, std::vector<Vector> &);
 string extractName(string &);
 void initializeMatrix(std::vector<Vector> &, int, int);
 void print(ostream &, Vector &, int);

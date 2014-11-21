@@ -121,6 +121,8 @@ class Mixture
     //! Computes the minimum message length
     long double computeMinimumMessageLength(int verbose = 0);
 
+    long double computeApproximatedMessageLength();
+
     void printIndividualMsgLengths(ostream &);
 
     //! Gets the minimum message length

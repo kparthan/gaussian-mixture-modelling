@@ -1,4 +1,6 @@
-for delta=1.8:0.1:2.6
+iterations = 50;
+formatspec = '%.1f';
+for delta=2.1:0.1:2.6
     pp = [0.5];
     mu1 = [0 0];
     mu2 = [delta 0];
@@ -6,17 +8,25 @@ for delta=1.8:0.1:2.6
     covar(:,:,1) = [1 0; 0 1];
     covar(:,:,2) = [1 0; 0 1];
     
-    delta_str = num2str(delta);
+    delta_str = num2str(delta,formatspec);
     common_file_prefix = strcat('./exp1/data/delta_',delta_str,'/mvnorm_iter_');
     summary_file = strcat('./exp1/summary/',delta_str);
     summary = fopen(summary_file,'w');
     params_file = strcat('./exp1/summary/',delta_str,'_parameters')
     parameters = fopen(params_file,'w');
-    for iter = 1:50
-      y = genmix(800,mu,covar,pp);
-      [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-4,0)
-      sample = y';
+    data_folder = strcat('../../experiments/infer_components/exp1/data/delta_',delta_str);
+    success_rate = 0;
+    for iter = 1:iterations
       iter_str = int2str(iter);
+      data_file = strcat(data_folder,'/mvnorm_iter_',iter_str,'.dat');
+      sample = load(data_file);
+      y = sample';
+      %y = genmix(800,mu,covar,pp);
+      [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-4,0)
+      %sample = y';
+      if (bestk == 2)
+        success_rate = success_rate + 1;
+      end
       file_name = strcat(common_file_prefix,iter_str,'.dat');
       save(file_name,'sample','-ascii');
       fprintf(summary,'%6d %6d %6d\n',iter,bestk,countf);
@@ -52,6 +62,7 @@ for delta=1.8:0.1:2.6
       end
       fclose(mixout);
     end
+    fprintf(summary,'\nsuccess rate: %.2f %%\n',success_rate*100/iterations)
     fclose(summary);
     fclose(parameters);
 end

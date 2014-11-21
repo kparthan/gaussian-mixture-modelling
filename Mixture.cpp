@@ -409,9 +409,11 @@ void Mixture::initialize4()
   Vector eigen_values(D,0);
   Matrix eigen_vectors = IdentityMatrix(D,D);
   eigenDecomposition(cov,eigen_values,eigen_vectors);
+  cout << "eigen_values: "; print(cout,eigen_values,3); cout << endl;
+  int max_eig = maximumIndex(eigen_values);
   Vector projection_axis(D,0);
   for (int i=0; i<D; i++) {
-    projection_axis[i] = eigen_vectors(i,0);
+    projection_axis[i] = eigen_vectors(i,max_eig);
   }
 
   std::vector<Vector> x_mu(N);
@@ -800,6 +802,28 @@ long double Mixture::computeMinimumMessageLength(int verbose /* default = 1 (pri
   }
 
   return minimum_msglen;
+}
+
+long double Mixture::computeApproximatedMessageLength()
+{
+  long double num_params = D * (D+3) * 0.5;
+  long double npars_2 = num_params / 2;
+
+  long double msglen = 0;
+
+  long double Il = negativeLogLikelihood(data);
+  msglen += Il;
+
+  long double Iw = 0;
+  for (int i=0; i<K; i++) {
+    Iw += log(weights[i]);
+  }
+  msglen += (npars_2 * Iw);
+
+  long double tmp = (npars_2 + 0.5) * K * log(N);
+  msglen += tmp;
+
+  return msglen / log(2);
 }
 
 void Mixture::printIndividualMsgLengths(ostream &log_file)
@@ -1215,11 +1239,11 @@ std::vector<Vector> Mixture::generate(int num_samples, bool save_data)
     int k = randomComponent();
     sample_size[k]++;
   }
-  ofstream fw("sample_size");
+  /*ofstream fw("sample_size");
   for (int i=0; i<sample_size.size(); i++) {
     fw << sample_size[i] << endl;
   }
-  fw.close();
+  fw.close();*/
   
   std::vector<std::vector<std::vector<long double> > > random_data;
   std::vector<Vector> sample;

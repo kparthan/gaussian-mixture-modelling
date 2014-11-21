@@ -24,10 +24,7 @@ void MultivariateNormal::updateConstants()
   D = mu.size();
   cov_inv = ZeroMatrix(D,D);
   invertMatrix(cov,cov_inv,det_cov);
-  if (det_cov < 0) {
-    cout << "cov: " << cov << endl;
-    cout << "inverse: " << cov_inv << endl;
-    cout << "det_cov: " << det_cov << endl;
+  if (det_cov <= 0) {
     deal_with_improper_covariances(cov,cov_inv,det_cov);
   }
   assert(det_cov > 0);

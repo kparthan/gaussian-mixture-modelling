@@ -67,29 +67,8 @@ void Experiments::simulate(int D)
   logneg.close(); logmsg.close(); logkldiv.close();
 }
 
-// ./experiments/infer_components/exp2/
-// bivariate data, covariance = I
-void Experiments::infer_components_exp1()
+struct Parameters Experiments::setParameters(int N, int D)
 {
-  int N = 800;
-  long double delta = 1.45;
-
-  int D = 10;
-  Vector mu1(D,0);
-  Vector mu2(D,0); mu2[0] = delta;
-  Matrix C1 = IdentityMatrix(D,D);
-  Matrix C2 = IdentityMatrix(D,D);
-
-  MultivariateNormal mvnorm1(mu1,C1);
-  MultivariateNormal mvnorm2(mu2,C2);
-
-  Vector weights(2,0.5);
-  std::vector<MultivariateNormal> components;
-  components.push_back(mvnorm1);
-  components.push_back(mvnorm2);
-  Mixture original(2,components,weights);
-
-  // iterations = 50 (in paper)
   struct Parameters parameters;
   parameters.simulation = SET;
   parameters.load_mixture = UNSET;
@@ -107,47 +86,147 @@ void Experiments::infer_components_exp1()
   NUM_THREADS = 1;
   ENABLE_DATA_PARALLELISM = UNSET;
   ESTIMATION = MML;
-  IMPROVEMENT_RATE = 0.005; 
+  return parameters;
+}
+
+// ./experiments/infer_components/exp1/
+// bivariate data, covariance = I
+void Experiments::infer_components_exp1()
+{
+  int N = 800;
+  int precision = 1;
+  long double delta = 2.1;
+
+  int D = 2;
+  Vector mu1(D,0);
+  Vector mu2(D,0); mu2[0] = delta;
+  Matrix C1 = IdentityMatrix(D,D);
+  Matrix C2 = IdentityMatrix(D,D);
+
+  MultivariateNormal mvnorm1(mu1,C1);
+  MultivariateNormal mvnorm2(mu2,C2);
+
+  Vector weights(2,0.5);
+  std::vector<MultivariateNormal> components;
+  components.push_back(mvnorm1);
+  components.push_back(mvnorm2);
+  Mixture original(2,components,weights);
+
+  // iterations = 50 (in paper)
+  struct Parameters parameters = setParameters(N,D);
+    
+  string results_folder = "./experiments/infer_components/exp1/";
+  //for (delta=2.1; delta<=2.6; delta+=0.1) {
+    generateExperimentalMixtures(original,delta,results_folder,N,precision);
+    inferExperimentalMixtures(original,delta,results_folder,parameters,precision);
+  //}
+}
+
+void Experiments::infer_components_exp2()
+{
+  int N = 800;
+  int precision = 2;
+  long double delta = 1.50;
+
+  int D = 10;
+  Vector mu1(D,0);
+  Vector mu2(D,delta);
+  Matrix C1 = IdentityMatrix(D,D);
+  Matrix C2 = IdentityMatrix(D,D);
+
+  MultivariateNormal mvnorm1(mu1,C1);
+  MultivariateNormal mvnorm2(mu2,C2);
+
+  Vector weights(2,0.5);
+  std::vector<MultivariateNormal> components;
+  components.push_back(mvnorm1);
+  components.push_back(mvnorm2);
+  Mixture original(2,components,weights);
+
+  // iterations = 50 (in paper)
+  struct Parameters parameters = setParameters(N,D);
     
   string results_folder = "./experiments/infer_components/exp2/";
-  //for (delta=2.0; delta<=2.6; delta+=0.1) {
-  //for (delta=1.25; delta<=1.35; delta+=0.05) {
-  //for (delta=1.40; delta<=1.50; delta+=0.05) {
-    inferExperimentalMixtures(original,delta,results_folder,parameters);
+  //for (delta=1.25; delta<=1.60; delta+=0.05) {
+    //generateExperimentalMixtures(original,delta,results_folder,N,precision);
+    inferExperimentalMixtures(original,delta,results_folder,parameters,precision);
   //}
+}
+
+void Experiments::generateExperimentalMixtures(
+  Mixture &original, 
+  long double delta,
+  string &results_folder,
+  int sample_size,
+  int precision
+) {
+  std::ostringstream ss;
+  ss << fixed << setprecision(precision);
+  ss << delta;
+  string delta_str = "delta_" + ss.str();
+  
+  string iter_str,data_file;
+  std::vector<Vector> data;
+  for (int iter=1; iter<=iterations; iter++) {
+    iter_str = boost::lexical_cast<string>(iter);
+    data_file = results_folder + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+    data = original.generate(sample_size,0);
+    writeToFile(data_file,data);
+  }
 }
 
 void Experiments::inferExperimentalMixtures(
   Mixture &original, 
   long double delta,
   string &results_folder,
-  struct Parameters &parameters
+  struct Parameters &parameters,
+  int precision
 ) {
   std::ostringstream ss;
-  ss << fixed << setprecision(2);
+  ss << fixed << setprecision(precision);
   ss << delta;
   string delta_str = "delta_" + ss.str();
-  //cout << "delta_str: " << delta_str << endl;
 
-  string infer_log,summary_log;
+  string iter_str,infer_log,data_file,summary_log;
   summary_log = results_folder + "summary/" + delta_str;
   ofstream summary(summary_log.c_str());
   std::vector<Vector> data;
+  int num_success = 0;
   for (int iter=1; iter<=iterations; iter++) {
-    string iter_str = boost::lexical_cast<string>(iter);
-    infer_log = results_folder + "logs/" + delta_str + "_iter_" + iter_str;
+    iter_str = boost::lexical_cast<string>(iter);
+    infer_log = results_folder + "logs/" + delta_str + "/mvnorm_iter_" + iter_str + ".log";
     parameters.infer_log = infer_log;
 
-    //data = original.generate(parameters.sample_size,0);
-    string data_file = "./support/mixturecode2/exp2/data/" + delta_str + "/"
-                       + "mvnorm_iter_" + iter_str + ".dat";
+    //data_file = results_folder + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+    data_file = "./support/mixturecode2/exp2/data/" + delta_str + "/"
+                + "mvnorm_iter_" + iter_str + ".dat";
     data = load_matrix(data_file,parameters.D);
-    modelMixture(parameters,data);
+
+    Vector data_weights(data.size(),1.0);
+    Mixture m(parameters.start_from,data,data_weights);
+    Mixture mixture = m;
+    mixture.estimateParameters();
+    ofstream log(parameters.infer_log.c_str());
+    Mixture stable = inferComponents(mixture,data.size(),data[0].size(),log);
+    log.close();
+    string ans = results_folder + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
+    ofstream out(ans.c_str());
+    Vector weights = stable.getWeights();
+    std::vector<MultivariateNormal> components = stable.getComponents();
+    for (int k=0; k<components.size(); k++) {
+      out << "\t" << fixed << setw(10) << setprecision(5) << weights[k];
+      out << "\t";
+      components[k].printParameters(out,1);
+    }
+    out.close();
 
     // update summary file
-    summary << "\t\t" << iter << "\t\t" << NUM_STABLE_COMPONENTS << "\t\t" 
+    if (stable.getNumberOfComponents() == original.getNumberOfComponents()) num_success++;
+    summary << "\t\t" << iter << "\t\t" << stable.getNumberOfComponents() << "\t\t" 
             << TOTAL_ITERATIONS << endl;
   }
+  summary << "\nsuccess rate: " << setprecision(2) 
+          << num_success * 100 / (long double)(iterations) << " %\n";
   summary.close();
 }
 

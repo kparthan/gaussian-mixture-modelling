@@ -257,6 +257,18 @@ void writeToFile(const char *file_name, std::vector<Vector> &v)
   file.close(); 
 }
 
+void writeToFile(string &file_name, std::vector<Vector> &v)
+{
+  ofstream file(file_name.c_str());
+  for (int i=0; i<v.size(); i++) {
+    for (int j=0; j<v[i].size(); j++) {
+      file << setw(15) << scientific << v[i][j];
+    }
+    file << endl;
+  }
+  file.close(); 
+}
+
 /*!
  *  \brief This module extracts the file name from the path
  *  \param file a reference to a string
@@ -671,7 +683,8 @@ void RunExperiments(int iterations)
   //experiments.simulate(3);
   //experiments.simulate(5);
 
-  experiments.infer_components_exp1();
+  //experiments.infer_components_exp1();
+  experiments.infer_components_exp2();
 }
 
 std::vector<std::vector<TwoPairs> > generatePairs(int D)
@@ -709,13 +722,38 @@ std::vector<std::vector<TwoPairs> > generatePairs(int D)
 
 void deal_with_improper_covariances(Matrix &A, Matrix &inv, long double &det)
 {
+  /*cout << "before fixing ...\n";
+  cout << "cov: " << A << endl;
+  cout << "inverse: " << inv << endl;
+  cout << "det_cov: " << det << endl;*/
+
   int D = A.size1();
   Vector eigen_values(D,0);
-  Matrix eigen_vectors = IdentityMatrix(D,D);
-  eigenDecomposition(A,eigen_values,eigen_vectors);
+  Matrix V = IdentityMatrix(D,D);
+  eigenDecomposition(A,eigen_values,V);
 
-  cout << "eigen_values: "; print(cout,eigen_values,0); cout << endl;
-  cout << "eigen_vectors: " << eigen_vectors << endl;
+  /*cout << "eigen_values: "; print(cout,eigen_values,0); cout << endl;
+  cout << "V: " << V << endl;*/
+
+  Matrix diag = ZeroMatrix(D,D);
+  for (int i=0; i<D; i++) {
+    if (eigen_values[i] <= 0) {
+      cout << "Improper covariance matrix ...\n";
+      diag(i,i) = TOLERANCE;
+    } else {
+      diag(i,i) = eigen_values[i];
+    }
+  }
+  Matrix Vt = trans(V);
+
+  Matrix tmp1 = prod(V,diag);
+  A = prod(tmp1,Vt);
+  invertMatrix(A,inv,det);
+
+  /*cout << "after fixing ...\n";
+  cout << "cov: " << A << endl;
+  cout << "inverse: " << inv << endl;
+  cout << "det_cov: " << det << endl;*/
 }
 
 ////////////////////// GEOMETRY FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -1669,6 +1707,8 @@ void compareMixtures(struct Parameters &parameters)
   cout << "msg1: " << msg1 << endl;
   long double msg2 = other.computeMinimumMessageLength(0);
   cout << "msg2: " << msg2 << endl;
+  long double msg_approx = other.computeApproximatedMessageLength();
+  cout << "msg_approx: " << msg_approx << endl;
 }
 
 void strategic_inference(
