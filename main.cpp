@@ -46,12 +46,18 @@ int main(int argc, char **argv)
 
   if (parameters.D != 1) {
     if (parameters.simulation == SET && parameters.comparison == UNSET) {
+      simulateMixtureModel(parameters);
+    }
+    if (parameters.comparison == SET) {
+      compareMixtures(parameters);
+    }
+  } else if (parameters.D == 1) {
+    if (parameters.simulation == SET && parameters.comparison == UNSET) {
       simulateMixtureModelUnivariate(parameters);
     }
     if (parameters.comparison == SET) {
       compareMixturesUnivariate(parameters);
     }
-  } else if (parameters.D == 1) {
   }
 
   delete(uniform_generator);

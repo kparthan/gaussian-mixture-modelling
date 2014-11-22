@@ -289,10 +289,8 @@ void MixtureUnivariate::initialize4()
 
   Vector init_means(K,0);
   long double add = sigma * sigma;
-  for (int i=0; i<D; i++) {
-    init_means[0] = mean + add; 
-    init_means[1] = mean - add;
-  }
+  init_means[0] = mean + add; 
+  init_means[1] = mean - add;
 
   Vector tmp(N,0);
   responsibility = std::vector<Vector>(K,tmp);
@@ -880,7 +878,7 @@ void MixtureUnivariate::load(string &file_name)
   long double sum_weights = 0;
   while (getline(file,line)) {
     K++;
-    boost::char_separator<char> sep("musiga,:()[] \t");
+    boost::char_separator<char> sep("musigacov,:()[] \t");
     boost::tokenizer<boost::char_separator<char> > tokens(line,sep);
     BOOST_FOREACH (const string& t, tokens) {
       istringstream iss(t);

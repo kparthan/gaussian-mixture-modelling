@@ -58,6 +58,33 @@ void Test::determinant()
   cout << "det(A): " << det << endl;
 }
 
+void Test::all_estimates_univariate()
+{
+  std::vector<Vector> random_sample,means;
+  int D;
+  Vector mu;
+  Matrix cov;
+  int sample_size = 100;
+  struct Estimates estimates;
+  MultivariateNormal mvnorm,mvnorm_est;
+  long double sigma = 1;
+  string file_name;
+
+  D = 4;
+  //means = generateRandomGaussianMeans(1,D);
+  //mu = means[0];
+  mu = Vector(D,0);
+  cov = generateRandomCovarianceMatrix(D);
+
+  mvnorm = MultivariateNormal(mu,cov);
+  mvnorm.printParameters();
+  random_sample = mvnorm.generate(sample_size);
+  writeToFile("random_sample.dat",random_sample,3);
+
+  mvnorm_est = MultivariateNormal(mu,cov);
+  mvnorm_est.computeAllEstimators(random_sample,estimates,1);
+}
+
 void Test::all_estimates()
 {
   std::vector<Vector> random_sample,means;

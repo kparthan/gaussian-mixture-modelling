@@ -8,6 +8,8 @@ class Test
 
     void determinant();
 
+    void all_estimates_univariate();
+
     void all_estimates();
 };
 

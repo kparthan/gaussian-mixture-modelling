@@ -9,7 +9,9 @@ extern int ESTIMATION;
  *  sets default values of mean as 0 and standard deviation as 1
  */
 Normal::Normal() : mu(0), sigma(1)
-{}
+{
+  updateConstants();
+}
 
 /*!
  *  \brief constructor function which sets the value of mean and 
@@ -18,7 +20,9 @@ Normal::Normal() : mu(0), sigma(1)
  *  \param sigma a long double
  */
 Normal::Normal(long double mu, long double sigma) : mu(mu), sigma(sigma)
-{}
+{
+  updateConstants();
+}
 
 void Normal::updateConstants()
 {

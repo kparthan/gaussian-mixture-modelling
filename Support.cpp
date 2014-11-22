@@ -671,7 +671,9 @@ void TestFunctions()
 
   //test.determinant();
 
-  test.random_data_generation();
+  //test.random_data_generation();
+
+  test.all_estimates_univariate();
 
   //test.all_estimates();
 }

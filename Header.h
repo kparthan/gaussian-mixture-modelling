@@ -64,7 +64,7 @@ typedef boost::numeric::ublas::zero_matrix<long double> ZeroMatrix;
 #define UNSET 0
 
 #define R1 10
-#define R2 5 
+#define R2 2 
 
 #define ML 0
 #define MML 1

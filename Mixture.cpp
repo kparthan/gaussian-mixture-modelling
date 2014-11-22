@@ -412,6 +412,15 @@ void Mixture::initialize4()
   for (int i=0; i<D; i++) {
     projection_axis[i] = eigen_vectors(i,max_eig);
   }
+  std::vector<Vector> init_means(K);
+  init_means[0] = Vector(D,0);
+  init_means[1] = Vector(D,0);
+  long double add;
+  for (int i=0; i<D; i++) {
+    add = eigen_values[max_eig] * projection_axis[i];
+    init_means[0][i] = mean[i] + add; 
+    init_means[1][i] = mean[i] - add;
+  }
 
   /*std::vector<Vector> x_mu(N);
   Vector diff(D,0);
@@ -424,19 +433,15 @@ void Mixture::initialize4()
   Vector projections(N,0);
   for (int i=0; i<N; i++) {
     projections[i] = data_weights[i] * computeDotProduct(x_mu[i],projection_axis);
-    //projections[i] = computeDotProduct(x_mu[i],projection_axis);
   }
   int min_index = minimumIndex(projections);
-  int max_index = maximumIndex(projections);*/
-  std::vector<Vector> init_means(K);
-  init_means[0] = Vector(D,0);
-  init_means[1] = Vector(D,0);
-  long double add;
+  int max_index = maximumIndex(projections);
+  cout << "max proj: " << projections[max_index] << endl;
+  cout << "max proj: " << projections[max_index] << endl;
   for (int i=0; i<D; i++) {
-    add = eigen_values[max_eig] * projection_axis[i];
-    init_means[0][i] = mean[i] + add; 
-    init_means[1][i] = mean[i] - add;
-  }
+    init_means[0][i] = mean[i] + projections[min_index] * projection_axis[i];
+    init_means[1][i] = mean[i] + projections[max_index] * projection_axis[i];
+  }*/
 
   Vector tmp(N,0);
   responsibility = std::vector<Vector>(K,tmp);
