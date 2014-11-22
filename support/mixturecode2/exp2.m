@@ -1,7 +1,7 @@
 clear
 iterations = 50;
 formatspec = '%.2f';
-%for delta=1.60:0.05:1.60
+%for delta=1.15:0.05:1.60
   delta = 1.60
   pp = [0.5];
   mu1 = zeros(1,10);
@@ -21,51 +21,51 @@ formatspec = '%.2f';
   success_rate = 0;
   for iter = 1:iterations
     iter_str = int2str(iter);
-    %data_file = strcat(data_folder,'/mvnorm_iter_',iter_str,'.dat')
-    %sample = load(data_file);
-    %y = sample';
-    y = genmix(800,mu,covar,pp);
+    data_file = strcat(data_folder,'/mvnorm_iter_',iter_str,'.dat')
+    sample = load(data_file);
+    y = sample';
+    %y = genmix(800,mu,covar,pp);
     [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-4,0)
-    sample = y';
+    %sample = y';
     if (bestk == 2)
       success_rate = success_rate + 1;
     end
-%    file_name = strcat(common_file_prefix,iter_str,'.dat');
-%    save(file_name,'sample','-ascii');
+    file_name = strcat(common_file_prefix,iter_str,'.dat');
+    save(file_name,'sample','-ascii');
     fprintf(summary,'%6d %6d %6d\n',iter,bestk,countf);
-%    fprintf(parameters,'\nIter: %d\n',iter);
-%    fprintf(parameters,'bestpp:\n');
-%    fprintf(parameters,'%f ',bestpp); fprintf(parameters,'\n')
-%    fprintf(parameters,'bestmu:\n');
-%    fprintf(parameters,'%f ',bestmu); fprintf(parameters,'\n')
-%    fprintf(parameters,'bestcov:\n');
-%    fprintf(parameters,'%f ',bestcov); fprintf(parameters,'\n')
-%    mix_file = strcat('./exp2/mixtures/delta_',delta_str,'/mvnorm_iter_',iter_str);
-%    mixout = fopen(mix_file,'w');
-%    for k=1:bestk
-%      w = bestpp(k);
-%      mu = bestmu(:,k);
-%      C = bestcov(:,:,k);
-%      fprintf(mixout,'\t%.5f\t\t',w);
-%      fprintf(mixout,'[mu]: (');
-%      D = 10;
-%      for i=1:D-1
-%        fprintf(mixout,'%.6e, ',mu(i,1));
-%      end
-%      fprintf(mixout,'%.6e)',mu(D,1));
-%      fprintf(mixout,'\t\t[cov]: (');
-%      for i=1:D
-%        fprintf(mixout,'(');
-%        for j=1:D-1
-%          fprintf(mixout,'%.6e, ',C(i,j));
-%        end
-%        fprintf(mixout,'%.6e)',C(i,D));
-%      end
-%      fprintf(mixout,')\n');
-%    end
-%    fclose(mixout);
+    fprintf(parameters,'\nIter: %d\n',iter);
+    fprintf(parameters,'bestpp:\n');
+    fprintf(parameters,'%f ',bestpp); fprintf(parameters,'\n')
+    fprintf(parameters,'bestmu:\n');
+    fprintf(parameters,'%f ',bestmu); fprintf(parameters,'\n')
+    fprintf(parameters,'bestcov:\n');
+    fprintf(parameters,'%f ',bestcov); fprintf(parameters,'\n')
+    mix_file = strcat('./exp2/mixtures/delta_',delta_str,'/mvnorm_iter_',iter_str);
+    mixout = fopen(mix_file,'w');
+    for k=1:bestk
+      w = bestpp(k);
+      mu_est = bestmu(:,k);
+      cov_est = bestcov(:,:,k);
+      fprintf(mixout,'\t%.5f\t\t',w);
+      fprintf(mixout,'[mu]: (');
+      D = 10;
+      for i=1:D-1
+        fprintf(mixout,'%.6e, ',mu_est(i,1));
+      end
+      fprintf(mixout,'%.6e)',mu_est(D,1));
+      fprintf(mixout,'\t\t[cov]: (');
+      for i=1:D
+        fprintf(mixout,'(');
+        for j=1:D-1
+          fprintf(mixout,'%.6e, ',cov_est(i,j));
+        end
+        fprintf(mixout,'%.6e)',cov_est(i,D));
+      end
+      fprintf(mixout,')\n');
+    end
+    fclose(mixout);
   end
-  fprintf(summary,'\nsuccess rate: %.2f %%\n',success_rate*100/iterations)
+  fprintf(summary,'\nsuccess rate: %.2f %%\n',success_rate*100/iterations);
   fclose(summary);
-%  fclose(parameters);
+  fclose(parameters);
 %end

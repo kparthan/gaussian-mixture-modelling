@@ -94,30 +94,29 @@ struct Parameters Experiments::setParameters(int N, int D)
 void Experiments::infer_components_exp1()
 {
   int N = 800;
-  int precision = 1;
-  long double delta = 2.1;
-
   int D = 2;
-  Vector mu1(D,0);
-  Vector mu2(D,0); mu2[0] = delta;
-  Matrix C1 = IdentityMatrix(D,D);
-  Matrix C2 = IdentityMatrix(D,D);
-
-  MultivariateNormal mvnorm1(mu1,C1);
-  MultivariateNormal mvnorm2(mu2,C2);
-
-  Vector weights(2,0.5);
-  std::vector<MultivariateNormal> components;
-  components.push_back(mvnorm1);
-  components.push_back(mvnorm2);
-  Mixture original(2,components,weights);
+  int precision = 1;
+  long double delta = 2.0;
 
   // iterations = 50 (in paper)
   struct Parameters parameters = setParameters(N,D);
     
   string results_folder = "./experiments/infer_components/exp1/";
-  //for (delta=2.1; delta<=2.6; delta+=0.1) {
-    generateExperimentalMixtures(original,delta,results_folder,N,precision);
+  //for (long double delta=1.8; delta<=2.6; delta+=0.1) {
+    Vector mu1(D,0);
+    Vector mu2(D,0); mu2[0] = delta;
+    Matrix C1 = IdentityMatrix(D,D);
+    Matrix C2 = IdentityMatrix(D,D);
+
+    MultivariateNormal mvnorm1(mu1,C1);
+    MultivariateNormal mvnorm2(mu2,C2);
+
+    Vector weights(2,0.5);
+    std::vector<MultivariateNormal> components;
+    components.push_back(mvnorm1);
+    components.push_back(mvnorm2);
+    Mixture original(2,components,weights);
+    //generateExperimentalMixtures(original,delta,results_folder,N,precision);
     inferExperimentalMixtures(original,delta,results_folder,parameters,precision);
   //}
 }
@@ -125,29 +124,28 @@ void Experiments::infer_components_exp1()
 void Experiments::infer_components_exp2()
 {
   int N = 800;
-  int precision = 2;
-  long double delta = 1.50;
-
   int D = 10;
-  Vector mu1(D,0);
-  Vector mu2(D,delta);
-  Matrix C1 = IdentityMatrix(D,D);
-  Matrix C2 = IdentityMatrix(D,D);
-
-  MultivariateNormal mvnorm1(mu1,C1);
-  MultivariateNormal mvnorm2(mu2,C2);
-
-  Vector weights(2,0.5);
-  std::vector<MultivariateNormal> components;
-  components.push_back(mvnorm1);
-  components.push_back(mvnorm2);
-  Mixture original(2,components,weights);
+  int precision = 2;
+  long double delta = 1.25;
 
   // iterations = 50 (in paper)
   struct Parameters parameters = setParameters(N,D);
     
   string results_folder = "./experiments/infer_components/exp2/";
-  //for (delta=1.25; delta<=1.60; delta+=0.05) {
+  //for (long double delta=1.15; delta<=1.60; delta+=0.05) {
+    Vector mu1(D,0);
+    Vector mu2(D,delta);
+    Matrix C1 = IdentityMatrix(D,D);
+    Matrix C2 = IdentityMatrix(D,D);
+
+    MultivariateNormal mvnorm1(mu1,C1);
+    MultivariateNormal mvnorm2(mu2,C2);
+
+    Vector weights(2,0.5);
+    std::vector<MultivariateNormal> components;
+    components.push_back(mvnorm1);
+    components.push_back(mvnorm2);
+    Mixture original(2,components,weights);
     //generateExperimentalMixtures(original,delta,results_folder,N,precision);
     inferExperimentalMixtures(original,delta,results_folder,parameters,precision);
   //}
@@ -197,9 +195,10 @@ void Experiments::inferExperimentalMixtures(
     infer_log = results_folder + "logs/" + delta_str + "/mvnorm_iter_" + iter_str + ".log";
     parameters.infer_log = infer_log;
 
-    //data_file = results_folder + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
-    data_file = "./support/mixturecode2/exp2/data/" + delta_str + "/"
-                + "mvnorm_iter_" + iter_str + ".dat";
+    data_file = results_folder + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+    //data_file = "./support/mixturecode2/exp2/data/" + delta_str + "/"
+    //            + "mvnorm_iter_" + iter_str + ".dat";
+    cout << "data_file: " << data_file << endl;
     data = load_matrix(data_file,parameters.D);
 
     Vector data_weights(data.size(),1.0);

@@ -1,9 +1,9 @@
-#ifndef MIXTURE_H
-#define MIXTURE_H
+#ifndef MIXTURE_UNIVARIATE_H
+#define MIXTURE_UNIVARIATE_H
 
-#include "MultivariateNormal.h"
+#include "Normal.h"
 
-class Mixture
+class MixtureUnivariate
 {
   private:
     //! ID
@@ -19,10 +19,10 @@ class Mixture
     int K;
 
     //! List of components
-    std::vector<MultivariateNormal> components;
+    std::vector<Normal> components;
     
     //! Sample (x_i) -- Cartesian coordinates
-    std::vector<Vector> data;
+    Vector data;
 
     //! Data weights
     Vector data_weights;
@@ -48,23 +48,25 @@ class Mixture
 
   public:
     //! Null constructor
-    Mixture();
+    MixtureUnivariate();
 
     //! Constructor
-    Mixture(int, std::vector<MultivariateNormal> &, Vector &);
+    MixtureUnivariate(int, std::vector<Normal> &, Vector &);
 
     //! Constructor
-    Mixture(int, std::vector<Vector> &, Vector &);
+    MixtureUnivariate(int, Vector &, Vector &);
 
     //! Constructor
-    Mixture(int, std::vector<MultivariateNormal> &, Vector &, Vector &, 
-            std::vector<Vector> &, std::vector<Vector> &, Vector &);
+    MixtureUnivariate(
+      int, std::vector<Normal> &, Vector &, Vector &, std::vector<Vector> &, Vector &, Vector &
+    );
+                      
 
     //! Overloading = operator
-    Mixture operator=(const Mixture &);
+    MixtureUnivariate operator=(const MixtureUnivariate &);
 
     //! Overloading == operator
-    bool operator==(const Mixture &);
+    bool operator==(const MixtureUnivariate &);
 
     //! Prepare log file
     string getLogFile();
@@ -73,7 +75,7 @@ class Mixture
     Vector getWeights();
 
     //! Gets the list of components
-    std::vector<MultivariateNormal> getComponents();
+    std::vector<Normal> getComponents();
 
     //! Returns number of components
     int getNumberOfComponents();
@@ -86,7 +88,6 @@ class Mixture
 
     //! Initialize parameters
     void initialize();
-    void initialize2();
     void initialize3();
     void initialize4();
 
@@ -110,13 +111,13 @@ class Mixture
     void updateResponsibilityMatrix(int);
 
     //! Computes the responsibility matrix
-    void computeResponsibilityMatrix(std::vector<Vector> &, string &);
+    void computeResponsibilityMatrix(Vector &, string &);
                                           
     //! Probability of a datum
-    long double log_probability(Vector &);
+    long double log_probability(long double &);
 
     //! Computes the negative log likelihood
-    long double computeNegativeLogLikelihood(std::vector<Vector> &);
+    long double computeNegativeLogLikelihood(Vector &);
 
     //! Computes the minimum message length
     long double computeMinimumMessageLength(int verbose = 0);
@@ -140,8 +141,6 @@ class Mixture
     //! EM loop
     void EM();
 
-    void CEM();
-
     //! Prints the model parameters
     void printParameters(ostream &, int, long double);
 
@@ -152,28 +151,28 @@ class Mixture
     void printParameters(ostream &);
 
     //! Loads the mixture file
-    void load(string &, int);
+    void load(string &);
 
     //! Loads the mixture file with the corresponding data
-    void load(string &, int, std::vector<Vector> &, Vector &);
+    void load(string &, Vector &, Vector &);
 
     //! Randomly choose a component
     int randomComponent();
 
     //! Saves the data generated from a component
-    void saveComponentData(int, std::vector<Vector> &);
+    void saveComponentData(int, Vector &);
 
     //! Generate random data from the distribution using mixture proportions
-    std::vector<Vector> generate(int, bool);
+    Vector generate(int, bool);
 
     //! Splits a component
-    Mixture split(int, ostream &);
+    MixtureUnivariate split(int, ostream &);
 
     //! Deltes a component
-    Mixture kill(int, ostream &);
+    MixtureUnivariate kill(int, ostream &);
 
     //! Joins two  components
-    Mixture join(int, int, ostream &);
+    MixtureUnivariate join(int, int, ostream &);
 
     //! Generate heat maps (for d=3)
     void generateHeatmapData(int, long double, int);
@@ -182,15 +181,15 @@ class Mixture
     int getNearestComponent(int);
 
     //! Computes the approx KL divergence between two mixtures
-    long double computeKLDivergence(Mixture &);
+    long double computeKLDivergence(MixtureUnivariate &);
 
-    long double computeKLDivergence(Mixture &, std::vector<Vector> &);
+    long double computeKLDivergence(MixtureUnivariate &, Vector &);
 
-    long double computeKLDivergenceUpperBound(Mixture &);
+    long double computeKLDivergenceUpperBound(MixtureUnivariate &);
 
-    long double computeKLDivergenceLowerBound(Mixture &);
+    long double computeKLDivergenceLowerBound(MixtureUnivariate &);
 
-    long double computeKLDivergenceAverageBound(Mixture &);
+    long double computeKLDivergenceAverageBound(MixtureUnivariate &);
 };
 
 #endif

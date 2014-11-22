@@ -683,8 +683,8 @@ void RunExperiments(int iterations)
   //experiments.simulate(3);
   //experiments.simulate(5);
 
-  //experiments.infer_components_exp1();
-  experiments.infer_components_exp2();
+  experiments.infer_components_exp1();
+  //experiments.infer_components_exp2();
 }
 
 std::vector<std::vector<TwoPairs> > generatePairs(int D)
@@ -882,6 +882,26 @@ Vector crossProduct(Vector &v1, Vector &v2)
   return ans;
 }
 
+long double computeSum(Vector &data)
+{
+  long double sum = 0;
+  for (int i=0; i<data.size(); i++) {
+    sum += data[i];
+  }
+  return sum;
+}
+
+long double computeSum(Vector &data, Vector &weights, long double &Neff)
+{
+  long double sum = 0;
+  Neff = 0;
+  for (int i=0; i<data.size(); i++) {
+    sum += (data[i] * weights[i]);
+    Neff += weights[i];
+  }
+  return sum;
+}
+
 Vector computeVectorSum(std::vector<Vector> &sample) 
 {
   int d = sample[0].size();
@@ -1013,7 +1033,11 @@ void computeMeanAndCovariance(
     x_mu[i] = diff;
   }
   Matrix S = computeDispersionMatrix(x_mu,weights);
-  cov = S / (Neff - 1);
+  if (Neff > 1) {
+    cov = S / (Neff - 1);
+  } else {
+    cov = S / Neff;
+  }
 }
 
 Matrix computeCovariance(
@@ -1038,7 +1062,12 @@ Matrix computeCovariance(
     x_mu[i] = diff;
   }
   Matrix S = computeDispersionMatrix(x_mu,weights);
-  Matrix cov = S / (Neff - 1);
+  Matrix cov;
+  if (Neff > 1) {
+    cov = S / (Neff - 1);
+  } else {
+    cov = S / Neff;
+  }
   return cov;
 }
 
@@ -1510,17 +1539,11 @@ std::vector<Vector> generateRandomGaussianMeans(int num_components, int D)
  *  to estimate parameters of a Von Mises distribution.
  *  \param parameters a reference to a struct Parameters
  */
-void computeEstimators(struct Parameters &parameters)
+void computeEstimators(struct Parameters &parameters, std::vector<Vector> &coordinates)
 {
-  std::vector<Vector> coordinates;
-  bool success = gatherData(parameters,coordinates);
-  /*if (parameters.heat_map == SET && coordinates[0].size() == 3) {
-    std::vector<std::vector<int> > bins = updateBins(coordinates,parameters.res);
-    outputBins(bins,parameters.res);
-  }*/
-  if (success && parameters.mixture_model == UNSET) {  // no mixture modelling
+  if (parameters.mixture_model == UNSET) {  // no mixture modelling
     modelOneComponent(parameters,coordinates);
-  } else if (success && parameters.mixture_model == SET) { // mixture modelling
+  } else if (parameters.mixture_model == SET) { // mixture modelling
     modelMixture(parameters,coordinates);
   }
 }
@@ -1565,6 +1588,7 @@ bool gatherData(struct Parameters &parameters, std::vector<Vector> &coordinates)
           }
         }
         cout << "# of profiles read: " << files.size() << endl;
+        parameters.D = coordinates[0].size();
         return 1;
       } else {
         cout << p << " exists, but is neither a regular file nor a directory\n";
@@ -1579,6 +1603,7 @@ bool gatherData(struct Parameters &parameters, std::vector<Vector> &coordinates)
       Structure structure;
       structure.load(parameters.profile_file);
       coordinates = structure.getCoordinates();
+      parameters.D = coordinates[0].size();
       return 1;
     } else {
       cout << "Profile " << parameters.profile_file << " does not exist ...\n";
@@ -1915,7 +1940,7 @@ void updateInference(Mixture &modified, Mixture &current, int N, ostream &log, i
     } else {
       log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
     }
-  } else if (operation == SPLIT) {
+  } /*else if (operation == SPLIT) {
     if (improvement_rate > IMPROVEMENT_RATE) {
       log << "\t ... IMPROVEMENT ... (+ " << fixed << setprecision(3) 
           << 100 * improvement_rate << " %) ";
@@ -1929,7 +1954,7 @@ void updateInference(Mixture &modified, Mixture &current, int N, ostream &log, i
     } else {
       log << "\t ... NO IMPROVEMENT\t\t\t[REJECT]\n\n";
     }
-  }
+  }*/
 }
 
 Mixture inferComponentsProbabilistic(Mixture &mixture, int N, int D, ostream &log)

@@ -1,11 +1,11 @@
-#include "Support.h"
+//#include "Support.h"
+#include "SupportUnivariate.h"
 #include "UniformRandomNumberGenerator.h"
 
 extern UniformRandomNumberGenerator *uniform_generator;
 
 int main(int argc, char **argv)
 {
-
   //cout << "boost eps: " << BOOST_UBLAS_TYPE_CHECK_EPSILON << endl;
   srand(time(NULL));
   UniformReal uniform_distribution(0,1);
@@ -26,15 +26,32 @@ int main(int argc, char **argv)
 
   if (parameters.read_profiles == SET && parameters.simulation == UNSET
        && parameters.comparison == UNSET) {
-    computeEstimators(parameters);
+    std::vector<Vector> coordinates;
+    bool success = gatherData(parameters,coordinates);
+
+    if (success) {
+      if (parameters.D != 1) { // D > 1 (multivariate)
+        computeEstimators(parameters,coordinates);
+      } else if (parameters.D == 1) {
+        Vector data(coordinates.size(),0);
+        for (int i=0; i<coordinates.size(); i++) {
+          data[i] = coordinates[i][0];
+        }
+        computeEstimatorsUnivariate(parameters,data);
+      }
+    } else {
+      cout << "something wrong in reading data ...\n";
+    }
   } 
 
-  if (parameters.simulation == SET && parameters.comparison == UNSET) {
-    simulateMixtureModel(parameters);
-  }
-
-  if (parameters.comparison == SET) {
-    compareMixtures(parameters);
+  if (parameters.D != 1) {
+    if (parameters.simulation == SET && parameters.comparison == UNSET) {
+      simulateMixtureModelUnivariate(parameters);
+    }
+    if (parameters.comparison == SET) {
+      compareMixturesUnivariate(parameters);
+    }
+  } else if (parameters.D == 1) {
   }
 
   delete(uniform_generator);

@@ -6,16 +6,18 @@
 #LDFLAGS=-static -lboost_program_options -lboost_filesystem -fopenmp -lm
 
 #CFLAGS=-std=c++11 -c -O3 -fopenmp $(shell pkg-config --cflags liblcb-experimental)
-CFLAGS=-std=c++11 -c -O3 -fopenmp 
-#CFLAGS=-std=c++11 -g -c -fopenmp
+#CFLAGS=-std=c++11 -c -O3 -fopenmp 
+CFLAGS=-std=c++11 -g -c -fopenmp
 LDFLAGS=-lboost_program_options -lboost_system -lboost_filesystem -fopenmp -lm 
 
 OBJECTS = main.o \
   Support.o \
+  SupportUnivariate.o \
   Structure.o \
   Normal.o \
   MultivariateNormal.o \
   Mixture.o \
+  MixtureUnivariate.o \
   Test.o \
   Experiments.o
 
@@ -30,6 +32,9 @@ main.o: main.cpp Support.h Header.h
 Support.o: Support.cpp Support.h Header.h UniformRandomNumberGenerator.h
 	g++ $(CFLAGS) $< -o $@
 
+SupportUnivariate.o: SupportUnivariate.cpp SupportUnivariate.h Header.h 
+	g++ $(CFLAGS) $< -o $@
+
 Structure.o: Structure.cpp Structure.h Header.h
 	g++ $(CFLAGS) $< -o $@
 
@@ -40,6 +45,9 @@ MultivariateNormal.o: MultivariateNormal.cpp MultivariateNormal.h Header.h
 	g++ $(CFLAGS) $< -o $@
 
 Mixture.o: Mixture.cpp Mixture.h Header.h 
+	g++ $(CFLAGS) $< -o $@
+
+MixtureUnivariate.o: MixtureUnivariate.cpp MixtureUnivariate.h Header.h 
 	g++ $(CFLAGS) $< -o $@
 
 Test.o: Test.cpp Test.h Header.h MultivariateNormal.h
