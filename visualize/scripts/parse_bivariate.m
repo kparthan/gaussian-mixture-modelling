@@ -1,4 +1,4 @@
-function [mus,covs] = parse(K,mixture)
+function [mus,covs] = parse_bivariate(K,mixture)
 
 fr = fopen(mixture,'r');
 all_lines = textscan(fr, '%[^\n]', K);  % cell

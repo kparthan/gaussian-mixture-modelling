@@ -14,6 +14,9 @@
 #include <ctime>
 #include <cassert>
 #include <omp.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 //#include <liblcb/Matrix.h>
 
 #define BOOST_UBLAS_NDEBUG 1 

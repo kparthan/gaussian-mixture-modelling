@@ -34,7 +34,7 @@ struct Parameters
   int comparison;           // to compare mixtures
   int comparison_type;
   string true_mixture;
-  string other_mixture;
+  string other1_mixture,other2_mixture;
   string random_sample;
 };
 
@@ -133,7 +133,7 @@ bool gatherData(struct Parameters &, std::vector<Vector> &);
 void modelOneComponent(struct Parameters &, std::vector<Vector> &);
 void modelMixture(struct Parameters &, std::vector<Vector> &);
 void simulateMixtureModel(struct Parameters &);
-void compareMixtures(struct Parameters &);
+std::pair<Vector,Vector> compareMixtures(struct Parameters &);
 void strategic_inference(struct Parameters &, Mixture &, std::vector<Vector> &);
 Mixture inferComponents(Mixture &, int, int, ostream &);
 Mixture inferComponentsProbabilistic(Mixture &, int, int, ostream &);

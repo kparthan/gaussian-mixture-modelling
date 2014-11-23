@@ -21,6 +21,7 @@ long double MIN_N;
 int STRATEGY;
 int MSGLEN_FAIL;
 int TERMINATE = 0;
+int TRUE_MIX,COMPARE1,COMPARE2;
 
 ////////////////////// GENERAL PURPOSE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -71,7 +72,8 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
        ("estimate",value<string>(&estimation_method),"ML/MML")
        ("compare","mixture comparison")
        ("true",value<string>(&parameters.true_mixture),"true mixture file")
-       ("other",value<string>(&parameters.other_mixture),"other mixture file")
+       ("other1",value<string>(&parameters.other1_mixture),"other1 mixture file")
+       ("other2",value<string>(&parameters.other2_mixture),"other1 mixture file")
   ;
   variables_map vm;
   store(command_line_parser(argc,argv).options(desc).run(),vm);
@@ -176,6 +178,15 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
       parameters.comparison_type = MC;
     } else if (vm.count("bounds")) {
       parameters.comparison_type = BOUNDS;
+    }
+    TRUE_MIX = UNSET; COMPARE1 = UNSET; COMPARE2 = UNSET;
+    if (vm.count("true")) {
+      TRUE_MIX = SET;
+    }
+    if (vm.count("other1") && vm.count("other2")) {
+      COMPARE2 = SET;
+    } else if (vm.count("other1")) {
+      COMPARE1 = SET;
     }
   } else {
     parameters.comparison = UNSET;
@@ -685,8 +696,13 @@ void RunExperiments(int iterations)
   //experiments.simulate(3);
   //experiments.simulate(5);
 
-  experiments.infer_components_exp1();
+  //experiments.infer_components_exp1();
   //experiments.infer_components_exp2();
+
+  //experiments.infer_components_exp1_compare();
+  //experiments.infer_components_exp2_compare();
+
+  experiments.infer_components_increasing_sample_size();
 }
 
 std::vector<std::vector<TwoPairs> > generatePairs(int D)
@@ -1705,12 +1721,19 @@ void simulateMixtureModel(struct Parameters &parameters)
   }
 }
 
-void compareMixtures(struct Parameters &parameters)
+std::pair<Vector,Vector> compareMixtures(struct Parameters &parameters)
 {
-  Mixture original,other;
-  original.load(parameters.true_mixture,parameters.D);
-
+  Mixture original,other1,other2;
   std::vector<Vector> data;
+  Vector dw;
+  long double upper,lower,kldiv,msg,msg_approx;
+  std::pair<Vector,Vector> results;
+  Vector msglens,kldivs;
+
+  if (TRUE_MIX == SET) {
+    original.load(parameters.true_mixture,parameters.D);
+  }
+
   if (parameters.read_profiles == SET) {
     bool success = gatherData(parameters,data);
     if (!success) {
@@ -1720,22 +1743,97 @@ void compareMixtures(struct Parameters &parameters)
   } else if (parameters.read_profiles == UNSET) {
     data = original.generate(parameters.sample_size,1);
   }
+  dw = Vector(data.size(),1);
 
-  //int sample_size = 1e6;
-  //data = original.generate(sample_size,1);
-  Vector dw(data.size(),1);
-  other.load(parameters.other_mixture,parameters.D,data,dw);
-  original.load(parameters.true_mixture,parameters.D,data,dw);
-  long double kldiv1 = original.computeKLDivergence(other,data);
-  cout << "kldiv (data): " << kldiv1 << endl;
-  long double kldiv2 = original.computeKLDivergenceAverageBound(other);
-  cout << "kldiv (bound): " << kldiv2 << endl;
-  long double msg1 = original.computeMinimumMessageLength(0);
-  cout << "msg1: " << msg1 << endl;
-  long double msg2 = other.computeMinimumMessageLength(0);
-  cout << "msg2: " << msg2 << endl;
-  long double msg_approx = other.computeApproximatedMessageLength();
-  cout << "msg_approx: " << msg_approx << endl;
+  if (TRUE_MIX == SET) {
+    original.load(parameters.true_mixture,parameters.D,data,dw);
+    msg = original.computeMinimumMessageLength(0);
+    cout << "\n*** TRUE MIX ***\n";
+    cout << "msg (true): " << msg << endl;
+  }
+
+  if (COMPARE1 == SET) {  // true mix is given
+    cout << "\n*** OTHER1 MIX ***\n";
+    other1.load(parameters.other1_mixture,parameters.D,data,dw);
+    kldiv = original.computeKLDivergence(other1,data);
+    cout << "kldiv (data): " << kldiv << endl;
+    kldiv = original.computeKLDivergenceAverageBound(other1);
+    cout << "kldiv (bound): " << kldiv << endl;
+    msg = other1.computeMinimumMessageLength(0);
+    cout << "msg (other1): " << msg << endl;
+    msg_approx = other1.computeApproximatedMessageLength();
+    cout << "msg_approx (other1): " << msg_approx << endl;
+  }
+
+  if (COMPARE2 == SET) {
+    cout << "\n*** OTHER1 MIX ***\n";
+    other1.load(parameters.other1_mixture,parameters.D,data,dw);
+    msg = other1.computeMinimumMessageLength(0);
+    cout << "msg (other1): " << msg << endl;
+    msglens.push_back(msg);
+    msg_approx = other1.computeApproximatedMessageLength();
+    cout << "msg_approx (other1): " << msg_approx << endl;
+    msglens.push_back(msg_approx);
+
+    if (TRUE_MIX == SET) {
+      kldiv = original.computeKLDivergence(other1,data);
+      cout << "kldiv (data): " << kldiv << endl;
+      kldivs.push_back(kldiv);
+      kldiv = original.computeKLDivergenceUpperBound(other1); upper = kldiv;
+      cout << "kldiv (upper bound): " << kldiv << endl;
+      kldivs.push_back(kldiv);
+      kldiv = original.computeKLDivergenceLowerBound(other1); lower = kldiv;
+      cout << "kldiv (lower bound): " << kldiv << endl;
+      kldivs.push_back(kldiv);
+      kldiv = 0.5 * (upper+lower);
+      kldivs.push_back(kldiv);
+    }
+
+    cout << "\n*** OTHER2 MIX ***\n";
+    other2.load(parameters.other2_mixture,parameters.D,data,dw);
+    msg = other2.computeMinimumMessageLength(0);
+    cout << "msg (other2): " << msg << endl;
+    msglens.push_back(msg);
+    msg_approx = other2.computeApproximatedMessageLength();
+    cout << "msg_approx (other2): " << msg_approx << endl;
+    msglens.push_back(msg_approx);
+
+    if (TRUE_MIX == SET) {
+      kldiv = original.computeKLDivergence(other2,data);
+      cout << "kldiv (data): " << kldiv << endl;
+      kldivs.push_back(kldiv);
+      kldiv = original.computeKLDivergenceUpperBound(other2); upper = kldiv;
+      cout << "kldiv (upper bound): " << kldiv << endl;
+      kldivs.push_back(kldiv);
+      kldiv = original.computeKLDivergenceLowerBound(other2); lower = kldiv;
+      cout << "kldiv (lower bound): " << kldiv << endl;
+      kldivs.push_back(kldiv);
+      kldiv = 0.5 * (upper+lower);
+      kldivs.push_back(kldiv);
+    }
+
+    /*string mix1_density_file = "./visualize/sampled_data/inferred_mixture_1_density.dat";
+    string mix2_density_file = "./visualize/sampled_data/inferred_mixture_2_density.dat";
+    ofstream mix1(mix1_density_file.c_str());
+    ofstream mix2(mix2_density_file.c_str());
+    long double mix1_density,mix2_density;
+    for (int j=0; j<data.size(); j++) {
+      mix1_density = exp(other1.log_probability(data[j]));
+      mix2_density = exp(other2.log_probability(data[j]));
+      for (int k=0; k<data[j].size(); k++) {
+        mix1 << fixed << setw(10) << setprecision(3) << data[j][k];
+        mix2 << fixed << setw(10) << setprecision(3) << data[j][k];
+      } // k
+      mix1 <<  "\t\t" << scientific << mix1_density << endl;
+      mix2 <<  "\t\t" << scientific << mix2_density << endl;
+    } // j
+    mix1.close();
+    mix2.close();*/
+  } // if (compare2 == SET)
+
+  results.first = msglens;
+  results.second = kldivs;
+  return results;
 }
 
 void strategic_inference(

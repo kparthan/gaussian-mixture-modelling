@@ -23,7 +23,7 @@ for delta=1.8:0.1:2.6
     sample = load(data_file);
     y = sample';
     %y = genmix(800,mu,covar,pp);
-    [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-4,0)
+    [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-5,0)
     %sample = y';
     if (bestk == 2)
       success_rate = success_rate + 1;

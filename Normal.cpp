@@ -45,6 +45,7 @@ Normal Normal::operator=(const Normal &source)
   if (this != &source) {
     mu = source.mu;
     sigma = source.sigma;
+    log_cd = source.log_cd;
   }
   return *this;
 }
@@ -158,7 +159,7 @@ void Normal::estimateSigma(
   long double x_mu;
   for (int i=0; i<N; i++) {
     x_mu = data[i] - estimates.mean;
-    sum_sqd_dev += (x_mu * x_mu);
+    sum_sqd_dev += (weights[i] * x_mu * x_mu);
   }
 
   switch(ESTIMATION) {

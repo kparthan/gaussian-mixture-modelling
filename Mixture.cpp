@@ -417,6 +417,7 @@ void Mixture::initialize4()
   init_means[1] = Vector(D,0);
   long double add;
   for (int i=0; i<D; i++) {
+    //add = sqrt(eigen_values[max_eig]) * projection_axis[i];
     add = eigen_values[max_eig] * projection_axis[i];
     init_means[0][i] = mean[i] + add; 
     init_means[1][i] = mean[i] - add;
@@ -1683,7 +1684,7 @@ long double Mixture::computeKLDivergenceUpperBound(Mixture &other)
     kl_upper_bound += (weights[i] * ent);
   }
 
-  return kl_upper_bound;
+  return kl_upper_bound / log(2);
 }
 
 long double Mixture::computeKLDivergenceLowerBound(Mixture &other)
@@ -1744,14 +1745,14 @@ long double Mixture::computeKLDivergenceLowerBound(Mixture &other)
   }
 
   //if (kl_lower_bound < 0) return 0;
-  //else return kl_lower_bound;
-  return kl_lower_bound;
+  //else return kl_lower_bound / log(2);
+  return kl_lower_bound / log(2);
 }
 
 long double Mixture::computeKLDivergenceAverageBound(Mixture &other)
 {
-  long double upper = computeKLDivergenceUpperBound(other) / log(2);
-  long double lower = computeKLDivergenceLowerBound(other) / log(2);
+  long double upper = computeKLDivergenceUpperBound(other);
+  long double lower = computeKLDivergenceLowerBound(other);
   cout << "upper bound: " << upper << endl;
   cout << "lower bound: " << lower << endl;
   return 0.5 * (upper + lower);

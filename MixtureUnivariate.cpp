@@ -259,6 +259,14 @@ void MixtureUnivariate::initialize3()
       responsibility[nearest][i] = 1;
     }
   } // iter
+  cout << "init_means: ";
+  for (int i=0; i<K; i++) {
+    cout << init_means[i] << "; ";
+  }cout << endl;
+  cout << "\nk_means: ";
+  for (int i=0; i<K; i++) {
+    cout << means[i] << "; ";
+  } cout << endl;
 
   sample_size = Vector(K,0);
   updateEffectiveSampleSize();
@@ -288,7 +296,7 @@ void MixtureUnivariate::initialize4()
   computeMeanAndSigma(data,data_weights,mean,sigma);
 
   Vector init_means(K,0);
-  long double add = sigma * sigma;
+  long double add = sigma;
   init_means[0] = mean + add; 
   init_means[1] = mean - add;
 
@@ -710,6 +718,7 @@ long double MixtureUnivariate::estimateParameters()
 {
   if (SPLITTING == 1) {
     initialize4();
+    //initialize();
   } else {
     initialize3();
   }
@@ -1055,9 +1064,9 @@ MixtureUnivariate MixtureUnivariate::split(int c, ostream &log)
       sum += responsibility_c[i][j];
     }
     sample_size_c[i] = sum;
-    if (sample_size_c[i] < MIN_N) {
+    /*if (sample_size_c[i] < MIN_N) {
       IGNORE_SPLIT = 1;
-    }
+    }*/
   }
 
   // child components

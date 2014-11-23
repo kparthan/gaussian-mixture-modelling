@@ -50,7 +50,7 @@ void Structure::read_profile(string &file_name)
   coordinates.clear();
 
   while(getline(profile,line)) {
-    boost::char_separator<char> sep(",() ");
+    boost::char_separator<char> sep(",()\t ");
     boost::tokenizer<boost::char_separator<char> > tokens(line,sep);
     Vector values; 
     BOOST_FOREACH (const string& t, tokens) {

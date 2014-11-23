@@ -2,6 +2,7 @@
 
 extern long double MIN_N;
 extern int IGNORE_SPLIT;
+extern int TRUE_MIX,COMPARE1,COMPARE2;
 
 long double computeSigma(Vector &data, Vector &weights, long double &mean)
 {
@@ -174,10 +175,14 @@ void simulateMixtureModelUnivariate(struct Parameters &parameters)
 
 void compareMixturesUnivariate(struct Parameters &parameters)
 {
-  MixtureUnivariate original,other;
-  original.load(parameters.true_mixture);
+  MixtureUnivariate original,other1,other2;
+  Vector data,dw;
+  long double kldiv,msg,msg_approx;
 
-  Vector data;
+  if (TRUE_MIX == SET) {
+    original.load(parameters.true_mixture);
+  }
+
   if (parameters.read_profiles == SET) {
     std::vector<Vector> data2;
     bool success = gatherData(parameters,data2);
@@ -192,22 +197,71 @@ void compareMixturesUnivariate(struct Parameters &parameters)
   } else if (parameters.read_profiles == UNSET) {
     data = original.generate(parameters.sample_size,1);
   }
+  dw = Vector(data.size(),1);
 
-  //int sample_size = 1e6;
-  //data = original.generate(sample_size,1);
-  Vector dw(data.size(),1);
-  other.load(parameters.other_mixture,data,dw);
-  original.load(parameters.true_mixture,data,dw);
-  long double kldiv1 = original.computeKLDivergence(other,data);
-  cout << "kldiv (data): " << kldiv1 << endl;
-  long double kldiv2 = original.computeKLDivergenceAverageBound(other);
-  cout << "kldiv (bound): " << kldiv2 << endl;
-  long double msg1 = original.computeMinimumMessageLength(0);
-  cout << "msg1: " << msg1 << endl;
-  long double msg2 = other.computeMinimumMessageLength(0);
-  cout << "msg2: " << msg2 << endl;
-  long double msg_approx = other.computeApproximatedMessageLength();
-  cout << "msg_approx: " << msg_approx << endl;
+  if (TRUE_MIX == SET) {
+    original.load(parameters.true_mixture,data,dw);
+    msg = original.computeMinimumMessageLength(0);
+    cout << "\n*** TRUE MIX ***\n";
+    cout << "msg (true): " << msg << endl;
+  }
+
+  if (COMPARE1 == SET) {  // true mix is given
+    cout << "\n*** OTHER1 MIX ***\n";
+    other1.load(parameters.other1_mixture,data,dw);
+    kldiv = original.computeKLDivergence(other1,data);
+    cout << "kldiv (data): " << kldiv << endl;
+    kldiv = original.computeKLDivergenceAverageBound(other1);
+    cout << "kldiv (bound): " << kldiv << endl;
+    msg = other1.computeMinimumMessageLength(0);
+    cout << "msg (other1): " << msg << endl;
+    msg_approx = other1.computeApproximatedMessageLength();
+    cout << "msg_approx (other1): " << msg_approx << endl;
+  }
+
+  if (COMPARE2 == SET) {
+    cout << "\n*** OTHER1 MIX ***\n";
+    other1.load(parameters.other1_mixture,data,dw);
+    msg = other1.computeMinimumMessageLength(0);
+    cout << "msg (other1): " << msg << endl;
+    msg_approx = other1.computeApproximatedMessageLength();
+    cout << "msg_approx (other1): " << msg_approx << endl;
+    if (TRUE_MIX == SET) {
+      kldiv = original.computeKLDivergence(other1,data);
+      cout << "kldiv (data): " << kldiv << endl;
+      kldiv = original.computeKLDivergenceAverageBound(other1);
+      cout << "kldiv (bound): " << kldiv << endl;
+    }
+
+    cout << "\n*** OTHER2 MIX ***\n";
+    other2.load(parameters.other2_mixture,data,dw);
+    msg = other2.computeMinimumMessageLength(0);
+    cout << "msg (other2): " << msg << endl;
+    msg_approx = other2.computeApproximatedMessageLength();
+    cout << "msg_approx (other2): " << msg_approx << endl;
+    if (TRUE_MIX == SET) {
+      kldiv = original.computeKLDivergence(other2,data);
+      cout << "kldiv (data): " << kldiv << endl;
+      kldiv = original.computeKLDivergenceAverageBound(other2);
+      cout << "kldiv (bound): " << kldiv << endl;
+    }
+
+    string mix1_density_file = "./visualize/sampled_data/inferred_mixture_1_density.dat";
+    string mix2_density_file = "./visualize/sampled_data/inferred_mixture_2_density.dat";
+    ofstream mix1(mix1_density_file.c_str());
+    ofstream mix2(mix2_density_file.c_str());
+    long double mix1_density,mix2_density;
+    for (int j=0; j<data.size(); j++) {
+      mix1_density = exp(other1.log_probability(data[j]));
+      mix2_density = exp(other2.log_probability(data[j]));
+      mix1 << fixed << setw(10) << setprecision(3) << data[j];
+      mix2 << fixed << setw(10) << setprecision(3) << data[j];
+      mix1 <<  "\t\t" << scientific << mix1_density << endl;
+      mix2 <<  "\t\t" << scientific << mix2_density << endl;
+    } // j
+    mix1.close();
+    mix2.close();
+  } // if (compare2 == SET)
 }
 
 void strategic_inference_univariate(

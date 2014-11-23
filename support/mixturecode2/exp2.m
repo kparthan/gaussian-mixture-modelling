@@ -1,8 +1,8 @@
 clear
 iterations = 50;
 formatspec = '%.2f';
-%for delta=1.15:0.05:1.60
-  delta = 1.60
+for delta=1.10:0.05:1.60
+  %delta = 1.30
   pp = [0.5];
   mu1 = zeros(1,10);
   mu2 = delta * ones(1,10);
@@ -25,7 +25,7 @@ formatspec = '%.2f';
     sample = load(data_file);
     y = sample';
     %y = genmix(800,mu,covar,pp);
-    [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-4,0)
+    [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-5,0)
     %sample = y';
     if (bestk == 2)
       success_rate = success_rate + 1;
@@ -68,4 +68,4 @@ formatspec = '%.2f';
   fprintf(summary,'\nsuccess rate: %.2f %%\n',success_rate*100/iterations);
   fclose(summary);
   fclose(parameters);
-%end
+end

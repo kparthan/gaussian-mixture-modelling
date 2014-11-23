@@ -4,7 +4,7 @@ clc;
 %data = load('../../visualize/test_4.dat')
 data = load('../../random_sample.dat')
 y = data'
-[bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-4,0)
+[bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-5,0)
 
 % print the inferred mixture
 file = fopen('../../simulation/inferred_mixture_2','w');

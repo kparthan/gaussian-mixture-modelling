@@ -1,6 +1,7 @@
 #include "Test.h"
 #include "Support.h"
 #include "MultivariateNormal.h"
+#include "SupportUnivariate.h"
 
 void Test::random_data_generation()
 {
@@ -60,29 +61,21 @@ void Test::determinant()
 
 void Test::all_estimates_univariate()
 {
-  std::vector<Vector> random_sample,means;
-  int D;
-  Vector mu;
-  Matrix cov;
-  int sample_size = 100;
-  struct Estimates estimates;
-  MultivariateNormal mvnorm,mvnorm_est;
-  long double sigma = 1;
+  Vector random_sample;
+  long double mu = 10;
+  long double sigma = 2;
+  int sample_size = 10;
+  struct EstimatesUnivariate estimates;
+  Normal norm,norm_est;
   string file_name;
 
-  D = 4;
-  //means = generateRandomGaussianMeans(1,D);
-  //mu = means[0];
-  mu = Vector(D,0);
-  cov = generateRandomCovarianceMatrix(D);
+  norm = Normal(mu,sigma);
+  norm.printParameters();
+  random_sample = norm.generate(sample_size);
+  writeToFile("random_sample.dat",random_sample);
 
-  mvnorm = MultivariateNormal(mu,cov);
-  mvnorm.printParameters();
-  random_sample = mvnorm.generate(sample_size);
-  writeToFile("random_sample.dat",random_sample,3);
-
-  mvnorm_est = MultivariateNormal(mu,cov);
-  mvnorm_est.computeAllEstimators(random_sample,estimates,1);
+  norm_est = Normal(mu,sigma);
+  norm_est.computeAllEstimators(random_sample,estimates,1);
 }
 
 void Test::all_estimates()
