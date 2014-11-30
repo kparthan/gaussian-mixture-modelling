@@ -823,7 +823,8 @@ long double Mixture::computeApproximatedMessageLength()
   }
   msglen += (npars_2 * Iw);
 
-  long double tmp = (npars_2 + 0.5) * K * log(N);
+  long double tmp = (npars_2 + 0.5) * K * (1 - log(12) + log(N));
+  //long double tmp = (npars_2 + 0.5) * K * log(N);
   msglen += tmp;
 
   return msglen / log(2);

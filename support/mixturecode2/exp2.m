@@ -17,16 +17,16 @@ for delta=1.10:0.05:1.60
   summary = fopen(summary_file,'w');
   params_file = strcat('./exp2/summary/',delta_str,'_parameters')
   parameters = fopen(params_file,'w');
-  data_folder = strcat('../../experiments/infer_components/exp2/data/delta_',delta_str);
+  %data_folder = strcat('../../experiments/infer_components/exp2/data/delta_',delta_str);
   success_rate = 0;
   for iter = 1:iterations
     iter_str = int2str(iter);
-    data_file = strcat(data_folder,'/mvnorm_iter_',iter_str,'.dat')
-    sample = load(data_file);
-    y = sample';
-    %y = genmix(800,mu,covar,pp);
+    %data_file = strcat(data_folder,'/mvnorm_iter_',iter_str,'.dat')
+    %sample = load(data_file);
+    %y = sample';
+    y = genmix(800,mu,covar,pp);
     [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-5,0)
-    %sample = y';
+    sample = y';
     if (bestk == 2)
       success_rate = success_rate + 1;
     end

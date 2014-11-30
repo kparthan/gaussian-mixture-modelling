@@ -700,9 +700,9 @@ void RunExperiments(int iterations)
   //experiments.infer_components_exp2();
 
   //experiments.infer_components_exp1_compare();
-  //experiments.infer_components_exp2_compare();
+  experiments.infer_components_exp2_compare();
 
-  experiments.infer_components_increasing_sample_size();
+  //experiments.infer_components_increasing_sample_size();
 }
 
 std::vector<std::vector<TwoPairs> > generatePairs(int D)

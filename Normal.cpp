@@ -165,6 +165,7 @@ void Normal::estimateSigma(
   switch(ESTIMATION) {
     case ML:
       estimates.sigma_ml = sqrt(sum_sqd_dev / estimates.Neff);
+      if (estimates.sigma_ml < AOM) estimates.sigma_ml = AOM;
       break;
 
     case MML:
@@ -174,11 +175,14 @@ void Normal::estimateSigma(
       } else {
         estimates.sigma_mml = sqrt(sum_sqd_dev / (estimates.Neff - 1));
       }
+      if (estimates.sigma_mml < AOM) estimates.sigma_mml = AOM;
       break;
 
     case BOTH:
       estimates.sigma_ml = sqrt(sum_sqd_dev / estimates.Neff);
       estimates.sigma_mml = sqrt(sum_sqd_dev / (estimates.Neff - 1));
+      if (estimates.sigma_ml < AOM) estimates.sigma_ml = AOM;
+      if (estimates.sigma_mml < AOM) estimates.sigma_mml = AOM;
       break;
   }
 }

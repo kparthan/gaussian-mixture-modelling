@@ -174,7 +174,8 @@ void Experiments::infer_components_exp1_compare()
     ofstream out2(output.c_str());
     for (int iter=1; iter<=iterations; iter++) {
       iter_str = boost::lexical_cast<string>(iter);
-      data_file = folder1 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+      //data_file = folder1 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+      data_file = folder2 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
       mix1_file = folder1 + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
       mix2_file = folder2 + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
       cout << "data: " << data_file << endl;
@@ -208,6 +209,7 @@ void Experiments::infer_components_exp1_compare()
 
 void Experiments::infer_components_exp2()
 {
+  iterations = 50;
   int N = 800;
   int D = 10;
   int precision = 2;
@@ -241,7 +243,7 @@ void Experiments::infer_components_exp2_compare()
   iterations = 50;
   int D = 10;
   int precision = 2;
-  //long double delta = 1.10;
+  long double delta = 1.60;
 
   string folder1 = "./experiments/infer_components/exp2/";
   string folder2 = "./support/mixturecode2/exp2/";
@@ -251,7 +253,7 @@ void Experiments::infer_components_exp2_compare()
   std::pair<Vector,Vector> results;
   Vector msglens,kldivs;
 
-  for (long double delta=1.10; delta<=1.60; delta+=0.05) {
+  for (long double delta=1.10; delta<=1.65; delta+=0.05) {
     Vector mu1(D,0);
     Vector mu2(D,delta);
     Matrix C1 = IdentityMatrix(D,D);
@@ -286,7 +288,8 @@ void Experiments::infer_components_exp2_compare()
     ofstream out2(output.c_str());
     for (int iter=1; iter<=iterations; iter++) {
       iter_str = boost::lexical_cast<string>(iter);
-      data_file = folder1 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+      //data_file = folder1 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+      data_file = folder2 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
       mix1_file = folder1 + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
       mix2_file = folder2 + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
       cout << "data: " << data_file << endl;
@@ -362,9 +365,9 @@ void Experiments::inferExperimentalMixtures(
     infer_log = results_folder + "logs/" + delta_str + "/mvnorm_iter_" + iter_str + ".log";
     parameters.infer_log = infer_log;
 
-    data_file = results_folder + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
-    //data_file = "./support/mixturecode2/exp2/data/" + delta_str + "/"
-    //            + "mvnorm_iter_" + iter_str + ".dat";
+    //data_file = results_folder + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+    data_file = "./support/mixturecode2/exp2/data/" + delta_str + "/"
+                + "mvnorm_iter_" + iter_str + ".dat";
     cout << "data_file: " << data_file << endl;
     data = load_matrix(data_file,parameters.D);
 
