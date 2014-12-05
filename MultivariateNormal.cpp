@@ -333,7 +333,7 @@ long double MultivariateNormal::computeLogPriorDensity()
 
 long double MultivariateNormal::computeLogFisherInformation(long double Neff)
 {
-  int dim = 0.5 * D * (D+1);
+  /*int dim = 0.5 * D * (D+1);
   Matrix cov_inv_fisher = ZeroMatrix(dim,dim);
   std::vector<std::vector<TwoPairs> > pairs = generatePairs(D);
   TwoPairs instance;
@@ -361,12 +361,19 @@ long double MultivariateNormal::computeLogFisherInformation(long double Neff)
   if (det_cov_inv_fisher <= 0) {
     cout << "det_cov_inv_fisher: " << det_cov_inv_fisher << endl;
     det_cov_inv_fisher *= -1;
-  }
+  }*/
 
   long double log_fisher = 0;
   log_fisher += (0.5 * D * (D+3) * log(Neff));
-  log_fisher -= log(det_cov); // mu fisher term
-  log_fisher -= log(det_cov_inv_fisher);  // cov fisher term
+  long double log_fisher_mu = -log(det_cov);
+  long double log_fisher_cov = -(D * log(2) + (D+1)*log(det_cov));
+
+  //cout << "f(mu): " << log_fisher_mu << endl;
+  //cout << "f(cov): " << log(det_cov_inv_fisher) << endl; 
+  //cout << "tmp: " << log_fisher_cov << endl;
+  //cout << "tmp2: " << log_fisher_mu+log_fisher_cov << endl;
+  log_fisher += log_fisher_mu; // mu fisher term
+  log_fisher += log_fisher_cov;  // cov fisher term
   return log_fisher;
 }
 

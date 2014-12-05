@@ -24,7 +24,8 @@ class Experiments
     void generateExperimentalMixtures(Mixture &, long double, string &, int, int);
     void inferExperimentalMixtures(Mixture &, long double, string &, struct Parameters &, int);
 
-    void infer_components_increasing_sample_size();
+    void infer_components_increasing_sample_size_exp3();
+    void infer_components_increasing_sample_size_exp4();
 };
 
 #endif

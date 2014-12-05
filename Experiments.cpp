@@ -366,7 +366,7 @@ void Experiments::inferExperimentalMixtures(
     parameters.infer_log = infer_log;
 
     //data_file = results_folder + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
-    data_file = "./support/mixturecode2/exp2/data/" + delta_str + "/"
+    data_file = "./support/mixturecode2/exp1/data/" + delta_str + "/"
                 + "mvnorm_iter_" + iter_str + ".dat";
     cout << "data_file: " << data_file << endl;
     data = load_matrix(data_file,parameters.D);
@@ -399,7 +399,83 @@ void Experiments::inferExperimentalMixtures(
   summary.close();
 }
 
-void Experiments::infer_components_increasing_sample_size()
+void Experiments::infer_components_increasing_sample_size_exp3()
+{
+  int D = 2;
+  int precision = 1;
+  long double delta = 2.0;
+  Vector mu1(D,0);
+  Vector mu2(D,0); mu2[0] = delta;
+  Matrix C1 = IdentityMatrix(D,D);
+  Matrix C2 = IdentityMatrix(D,D);
+  MultivariateNormal mvnorm1(mu1,C1);
+  MultivariateNormal mvnorm2(mu2,C2);
+  Vector weights(2,0.5);
+  std::vector<MultivariateNormal> components;
+  components.push_back(mvnorm1);
+  components.push_back(mvnorm2);
+  Mixture original(2,components,weights);
+
+  string folder = "./experiments/infer_components/exp3/";
+  string N_str,iter_str,data_file,data_folder;
+  std::vector<Vector> data;
+  // generate data
+/*
+  //for (int N=600; N<=2000; N+=50) {
+  for (int N=2050; N<=4000; N+=50) {
+    N_str = "N_" + boost::lexical_cast<string>(N);
+    data_folder = folder + N_str + "/";
+    if (stat(data_folder.c_str(), &st) == -1) {
+        mkdir(data_folder.c_str(), 0700);
+    }
+    for (int iter=1; iter<=iterations; iter++) {
+      data = original.generate(N,0);
+      iter_str = boost::lexical_cast<string>(iter);
+      data_file = data_folder + "mvnorm_iter_" + iter_str + ".dat";
+      writeToFile(data_file,data);
+    } // for iter()
+  } // for N()
+*/
+
+  // infer mixture components
+  struct Parameters parameters;
+  string summary_folder = folder + "summary/";
+  string summary_file;
+  long double avg_number;
+  string avg_inference = folder + "avg_inference";
+  ofstream avginfer(avg_inference.c_str(),ios::app);
+  //for (int N=600; N<=2000; N+=50) {
+  for (int N=2050; N<=4000; N+=50) {
+    N_str = "N_" + boost::lexical_cast<string>(N);
+    data_folder = folder + N_str + "/";
+    summary_file = summary_folder + N_str;
+    ofstream out(summary_file.c_str());
+    avg_number = 0;
+    parameters = setParameters(N,D);
+    for (int iter=1; iter<=iterations; iter++) {
+      iter_str = boost::lexical_cast<string>(iter);
+      data_file = data_folder + "mvnorm_iter_" + iter_str + ".dat";
+      data = load_matrix(data_file,D);
+      Vector data_weights(data.size(),1.0);
+      Mixture m(parameters.start_from,data,data_weights);
+      Mixture mixture = m;
+      mixture.estimateParameters();
+      parameters.infer_log = "dummy";
+      ofstream log(parameters.infer_log.c_str());
+      Mixture stable = inferComponents(mixture,data.size(),data[0].size(),log);
+      log.close();
+      int ans = stable.getNumberOfComponents();
+      out << ans << endl;
+      avg_number += ans;
+    } // for iter()
+    out.close();
+    avg_number /= iterations;
+    avginfer << N << "\t\t" << avg_number << endl; 
+  } // for N()
+  avginfer.close();
+}
+
+void Experiments::infer_components_increasing_sample_size_exp4()
 {
   int D = 10;
   int precision = 2;
@@ -416,7 +492,7 @@ void Experiments::infer_components_increasing_sample_size()
   components.push_back(mvnorm2);
   Mixture original(2,components,weights);
 
-  string folder = "./experiments/infer_components/exp3/";
+  string folder = "./experiments/infer_components/exp4/";
   string N_str,iter_str,data_file,data_folder;
   std::vector<Vector> data;
   // generate data
@@ -442,7 +518,7 @@ void Experiments::infer_components_increasing_sample_size()
   string summary_file;
   long double avg_number;
   string avg_inference = folder + "avg_inference";
-  ofstream avginfer(avg_inference.c_str());
+  ofstream avginfer(avg_inference.c_str(),ios::app);
   for (int N=600; N<=2000; N+=50) {
     N_str = "N_" + boost::lexical_cast<string>(N);
     data_folder = folder + N_str + "/";

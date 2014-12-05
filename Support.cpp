@@ -680,11 +680,13 @@ void TestFunctions()
 {
   Test test;
 
+  test.fisher();
+
   //test.determinant();
 
   //test.random_data_generation();
 
-  test.all_estimates_univariate();
+  //test.all_estimates_univariate();
 
   //test.all_estimates();
 }
@@ -700,9 +702,10 @@ void RunExperiments(int iterations)
   //experiments.infer_components_exp2();
 
   //experiments.infer_components_exp1_compare();
-  experiments.infer_components_exp2_compare();
+  //experiments.infer_components_exp2_compare();
 
-  //experiments.infer_components_increasing_sample_size();
+  experiments.infer_components_increasing_sample_size_exp3();
+  //experiments.infer_components_increasing_sample_size_exp4();
 }
 
 std::vector<std::vector<TwoPairs> > generatePairs(int D)

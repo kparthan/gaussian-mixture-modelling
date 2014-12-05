@@ -35,6 +35,20 @@ void Test::random_data_generation()
   writeToFile("./visualize/mvnorm3d.dat",random_sample,3);
 }
 
+void Test::fisher()
+{
+  int D;
+  Vector mean;
+  Matrix cov;
+
+  D = 5;
+  mean = Vector(D,0);
+  cov = generateRandomCovarianceMatrix(D);
+  //cov = IdentityMatrix(3,3); cov(0,0) = 1; cov(1,1) = 10; cov(2,2) = 100;
+  MultivariateNormal mvnorm(mean,cov);
+  mvnorm.computeLogFisherInformation(1);
+}
+
 void Test::determinant()
 {
   int D;
