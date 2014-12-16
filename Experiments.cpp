@@ -955,88 +955,26 @@ void Experiments::infer_components_exp_spiral()
 void Experiments::infer_components_exp_spiral_compare()
 {
   iterations = 50;
-  Vector mu,L,start(3,0),end(3,0);
-  Matrix cov,Psi;
 
   string folder1 = "./experiments/infer_components/exp_spiral/";
   string folder2 = "./support/mixturecode2/exp_spiral/";
-  string iter_str,mix1_file,mix2_file,connectors,data_file,successful;
-  std::vector<MultivariateNormal> mix1_comps,mix2_comps;
+  string iter_str,mix1_file,mix2_file,data_file;
   struct Parameters parameters;
   std::pair<Vector,Vector> results;
   Vector msglens;
-  bool success;
-  int i,j;
 
   string comparisons = folder1 + "msglens_comparisons";
   ofstream msg_comp(comparisons.c_str());
-  successful = folder1 + "successful";
-  ofstream success1(successful.c_str());
-  successful = folder2 + "successful";
-  ofstream success2(successful.c_str());
 
   for (int iter=1; iter<=iterations; iter++) {
     iter_str = boost::lexical_cast<string>(iter);
 
-    // factor analyses
-    mix1_file = folder1 + "mixtures/mixture_iter_" + iter_str;
-    cout << "mix1: " << mix1_file << endl;
-    Mixture mix1;
-    mix1.load(mix1_file,3);
-    mix1_comps = mix1.getComponents();
-    connectors = folder1 + "connectors/connectors_iter_" + iter_str;
-    ofstream out1(connectors.c_str());
-    for (i=0; i<mix1_comps.size(); i++) {
-      mu = mix1_comps[i].Mean();
-      cov = mix1_comps[i].Covariance();
-      success = factor_analysis_3d(cov,L,Psi);
-      if (success == 1) {
-        for (j=0; j<3; j++) {
-          start[j] = mu[j] - L[j];
-          out1 << scientific << setprecision(6) << start[j] << "\t";
-          end[j] = mu[j] + L[j];
-        }
-        out1 << endl;
-        for (j=0; j<3; j++) {
-          out1 << scientific << setprecision(6) << end[j] << "\t";
-        }
-        out1 << endl;
-      } else break;
-    } // for() i
-    if (i == mix1_comps.size()) {
-      success1 << iter << endl;
-    }
-    mix2_file = folder2 + "mixtures/mixture_iter_" + iter_str;
-    cout << "mix2: " << mix2_file << endl;
-    Mixture mix2;
-    mix2.load(mix2_file,3);
-    mix2_comps = mix2.getComponents();
-    connectors = folder2 + "connectors/connectors_iter_" + iter_str;
-    ofstream out2(connectors.c_str());
-    for (i=0; i<mix2_comps.size(); i++) {
-      mu = mix2_comps[i].Mean();
-      cov = mix2_comps[i].Covariance();
-      success = factor_analysis_3d(cov,L,Psi);
-      if (success == 1) {
-        for (j=0; j<3; j++) {
-          start[j] = mu[j] - L[j];
-          out2 << scientific << setprecision(6) << start[j] << "\t";
-          end[j] = mu[j] + L[j];
-        }
-        out2 << endl;
-        for (j=0; j<3; j++) {
-          out2 << scientific << setprecision(6) << end[j] << "\t";
-        }
-        out2 << endl;
-      } else break;
-    } // for() i
-    if (i == mix2_comps.size()) {
-      success2 << iter << endl;
-    }
-
-    // mixture comparison
     data_file = folder1 + "data/spiral_iter_" + iter_str + ".dat";
+    mix1_file = folder1 + "mixtures/mixture_iter_" + iter_str;
+    mix2_file = folder2 + "mixtures/mixture_iter_" + iter_str;
     cout << "data: " << data_file << endl;
+    cout << "mix1: " << mix1_file << endl;
+    cout << "mix2: " << mix2_file << endl;
 
     parameters.comparison = SET;
     TRUE_MIX = UNSET; COMPARE1 = UNSET; COMPARE2 = SET;
@@ -1053,7 +991,5 @@ void Experiments::infer_components_exp_spiral_compare()
     msg_comp << endl;
   } // for() iter
   msg_comp.close();
-  success1.close();
-  success2.close();
 }
 
