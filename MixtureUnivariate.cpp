@@ -885,9 +885,10 @@ void MixtureUnivariate::load(string &file_name)
   Vector numbers;
   long double mean,sigma;
   long double sum_weights = 0;
+  long double sigmasq;
   while (getline(file,line)) {
     K++;
-    boost::char_separator<char> sep("musigacov,:()[] \t");
+    boost::char_separator<char> sep("mucov,:()[] \t");
     boost::tokenizer<boost::char_separator<char> > tokens(line,sep);
     BOOST_FOREACH (const string& t, tokens) {
       istringstream iss(t);
@@ -898,7 +899,8 @@ void MixtureUnivariate::load(string &file_name)
     weights.push_back(numbers[0]);
     sum_weights += numbers[0];
     mean = numbers[1];
-    sigma = numbers[2];
+    sigmasq = numbers[2];
+    sigma = sqrt(sigmasq);
     Normal norm(mean,sigma);
     components.push_back(norm);
     numbers.clear();

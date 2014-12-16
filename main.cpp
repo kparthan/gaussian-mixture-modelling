@@ -24,6 +24,10 @@ int main(int argc, char **argv)
     RunExperiments(parameters.iterations);
   }
 
+  if (parameters.compute_responsibility_matrix == SET) {
+    computeResponsibilityGivenMixture(parameters);
+  }
+
   if (parameters.read_profiles == SET && parameters.simulation == UNSET
        && parameters.comparison == UNSET) {
     std::vector<Vector> coordinates;

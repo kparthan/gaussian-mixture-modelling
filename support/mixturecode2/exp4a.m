@@ -1,7 +1,7 @@
 clear
 iterations = 50;
 formatspec = '%.2f';
-delta = 1.20
+delta = 10
 pp = [0.5];
 mu1 = zeros(1,10);
 mu2 = delta * ones(1,10);
@@ -10,13 +10,13 @@ clear covar;
 covar(:,:,1) = eye(10);
 covar(:,:,2) = eye(10);
 
-folder = '../../experiments/infer_components/exp4/delta_1.20/';
-fout = fopen('./exp4/delta_1.20/avg_inference','w');
-for N=600:50:2001
+folder = '../../experiments/infer_components/exp4a/delta_10/';
+fout = fopen('./exp4a/delta_10/avg_inference','w');
+for N=50:50:201
   inferred = []
   N_str = strcat('N_',num2str(N));
   data_folder = strcat(folder,N_str);
-  summary_file = strcat('./exp4/delta_1.20/',N_str)
+  summary_file = strcat('./exp4a/delta_10/',N_str)
   summary = fopen(summary_file,'w');
   for iter = 1:iterations
     iter_str = int2str(iter);

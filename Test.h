@@ -13,6 +13,8 @@ class Test
     void all_estimates_univariate();
 
     void all_estimates();
+
+    void factor_analysis_spiral_data();
 };
 
 #endif

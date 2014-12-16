@@ -36,6 +36,7 @@ struct Parameters
   string true_mixture;
   string other1_mixture,other2_mixture;
   string random_sample;
+  int compute_responsibility_matrix;  // flag
 };
 
 //! parameters associated with estimation
@@ -85,8 +86,11 @@ int maximumIndex(Vector &);
 void setEstimationMethod(int);
 void TestFunctions();
 void RunExperiments(int);
+void computeResponsibilityGivenMixture(struct Parameters &);
 std::vector<std::vector<TwoPairs> > generatePairs(int);
 void deal_with_improper_covariances(Matrix &, Matrix &, long double &);
+std::vector<Vector> generate_spiral_data(int);
+bool factor_analysis_3d(Matrix &, Vector &, Matrix &);
 
 // geometry functions
 std::vector<Vector> load_matrix(string &, int);

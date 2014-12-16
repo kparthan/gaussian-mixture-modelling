@@ -1,9 +1,15 @@
 clear;
 clc;
-%data = load('./data/mvnorm_iter_1.dat')
-%data = load('../../visualize/test_4.dat')
 data = load('../../random_sample.dat')
 y = data'
+%delta = 2.5
+%pp = [0.5];
+%mu1 = [0 0];
+%mu2 = [delta 0];
+%mu = [mu1' mu2'];
+%covar(:,:,1) = [1 0; 0 1];
+%covar(:,:,2) = [1 0; 0 1];
+%y = genmix(100,mu,covar,pp);
 [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-5,0)
 
 % print the inferred mixture

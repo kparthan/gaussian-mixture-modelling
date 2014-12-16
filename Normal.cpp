@@ -60,13 +60,15 @@ void Normal::printParameters()
 void Normal::printParameters(ostream &os)
 {
   os << "[mu]: " << setprecision(3) << mu;
-  os << "\t[sigma]: " << setprecision(3) << sigma << endl;
+  //os << "\t[sigma]: " << setprecision(3) << sigma << endl;
+  os << "\t[cov]: " << setprecision(3) << sigma*sigma << endl;
 }
 
 void Normal::printParameters(ostream &os, int set)
 {
   os << "[mu]: " << scientific << setprecision(6) << mu;
-  os << "\t[sigma]: " << scientific << setprecision(6) << sigma << endl;
+  //os << "\t[sigma]: " << scientific << setprecision(6) << sigma << endl;
+  os << "\t[cov]: " << scientific << setprecision(6) << sigma*sigma << endl;
 }
 
 /*!

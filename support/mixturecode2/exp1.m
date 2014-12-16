@@ -7,31 +7,32 @@ for delta=1.8:0.1:2.6
   mu1 = [0 0];
   mu2 = [delta 0];
   mu = [mu1' mu2'];
+  clear covar;
   covar(:,:,1) = [1 0; 0 1];
   covar(:,:,2) = [1 0; 0 1];
   
   delta_str = num2str(delta,formatspec);
   common_file_prefix = strcat('./exp1/data/delta_',delta_str,'/mvnorm_iter_');
-  summary_file = strcat('./exp1/summary/',delta_str);
+  summary_file = strcat('./exp1/summary/delta_',delta_str);
   summary = fopen(summary_file,'w');
-  params_file = strcat('./exp1/summary/',delta_str,'_parameters')
+  params_file = strcat('./exp1/summary/delta_',delta_str,'_parameters')
   parameters = fopen(params_file,'w');
   %data_folder = strcat('../../experiments/infer_components/exp1/data/delta_',delta_str);
   success_rate = 0;
+  inferred = []
   for iter = 1:iterations
     iter_str = int2str(iter);
-    data_file = strcat(common_file_prefix,iter_str,'.dat');
     %data_file = strcat(data_folder,'/mvnorm_iter_',iter_str,'.dat')
-    sample = load(data_file);
-    y = sample';
-    %y = genmix(800,mu,covar,pp);
+    %sample = load(data_file);
+    %y = sample';
+    y = genmix(800,mu,covar,pp);
     [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-5,0)
-    %sample = y';
+    sample = y';
     if (bestk == 2)
       success_rate = success_rate + 1;
     end
-    %file_name = strcat(common_file_prefix,iter_str,'.dat');
-    %save(file_name,'sample','-ascii');
+    file_name = strcat(common_file_prefix,iter_str,'.dat');
+    save(file_name,'sample','-ascii');
     fprintf(summary,'%6d %6d %6d\n',iter,bestk,countf);
     fprintf(parameters,'\nIter: %d\n',iter);
     fprintf(parameters,'bestpp:\n');
@@ -42,6 +43,7 @@ for delta=1.8:0.1:2.6
     fprintf(parameters,'%f ',bestcov); fprintf(parameters,'\n')
     mix_file = strcat('./exp1/mixtures/delta_',delta_str,'/mvnorm_iter_',iter_str);
     mixout = fopen(mix_file,'w');
+    inferred = [inferred bestk];
     for k=1:bestk
       w = bestpp(k);
       mu_est = bestmu(:,k);
@@ -65,7 +67,11 @@ for delta=1.8:0.1:2.6
     end
     fclose(mixout);
   end
+  avg_number = mean(inferred);
+  variance = var(inferred);
   fprintf(summary,'\nsuccess rate: %.2f %%\n',success_rate*100/iterations);
+  fprintf(summary,'Avg:%f\n',avg_number);
+  fprintf(summary,'Variance:%f\n',variance);
   fclose(summary);
   fclose(parameters);
 end

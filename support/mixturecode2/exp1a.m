@@ -1,23 +1,23 @@
 clear
 iterations = 50;
-formatspec = '%.2f';
-for delta=1.10:0.05:1.61
-  %delta = 1.30
+formatspec = '%.1f';
+for delta=1.8:0.1:2.65
+  %delta = 1.8
   pp = [0.5];
-  mu1 = zeros(1,10);
-  mu2 = delta * ones(1,10);
+  mu1 = [0 0];
+  mu2 = [delta 0];
   mu = [mu1' mu2'];
   clear covar;
-  covar(:,:,1) = eye(10);
-  covar(:,:,2) = eye(10);
+  covar(:,:,1) = [1 0; 0 1];
+  covar(:,:,2) = [1 0; 0 1];
   
   delta_str = num2str(delta,formatspec);
-  common_file_prefix = strcat('./exp2/data/delta_',delta_str,'/mvnorm_iter_');
-  summary_file = strcat('./exp2/summary/delta_',delta_str);
+  common_file_prefix = strcat('./exp1a/data/delta_',delta_str,'/mvnorm_iter_');
+  summary_file = strcat('./exp1a/summary/delta_',delta_str);
   summary = fopen(summary_file,'w');
-  params_file = strcat('./exp2/summary/delta_',delta_str,'_parameters')
+  params_file = strcat('./exp1a/summary/delta_',delta_str,'_parameters')
   parameters = fopen(params_file,'w');
-  %data_folder = strcat('../../experiments/infer_components/exp2/data/delta_',delta_str);
+  %data_folder = strcat('../../experiments/infer_components/exp1a/data/delta_',delta_str);
   success_rate = 0;
   inferred = []
   for iter = 1:iterations
@@ -25,7 +25,7 @@ for delta=1.10:0.05:1.61
     %data_file = strcat(data_folder,'/mvnorm_iter_',iter_str,'.dat')
     %sample = load(data_file);
     %y = sample';
-    y = genmix(800,mu,covar,pp);
+    y = genmix(100,mu,covar,pp);
     [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-5,0)
     sample = y';
     if (bestk == 2)
@@ -41,7 +41,7 @@ for delta=1.10:0.05:1.61
     fprintf(parameters,'%f ',bestmu); fprintf(parameters,'\n')
     fprintf(parameters,'bestcov:\n');
     fprintf(parameters,'%f ',bestcov); fprintf(parameters,'\n')
-    mix_file = strcat('./exp2/mixtures/delta_',delta_str,'/mvnorm_iter_',iter_str);
+    mix_file = strcat('./exp1a/mixtures/delta_',delta_str,'/mvnorm_iter_',iter_str);
     mixout = fopen(mix_file,'w');
     inferred = [inferred bestk];
     for k=1:bestk
@@ -50,7 +50,7 @@ for delta=1.10:0.05:1.61
       cov_est = bestcov(:,:,k);
       fprintf(mixout,'\t%.5f\t\t',w);
       fprintf(mixout,'[mu]: (');
-      D = 10;
+      D = 2;
       for i=1:D-1
         fprintf(mixout,'%.6e, ',mu_est(i,1));
       end

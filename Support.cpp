@@ -74,6 +74,7 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
        ("true",value<string>(&parameters.true_mixture),"true mixture file")
        ("other1",value<string>(&parameters.other1_mixture),"other1 mixture file")
        ("other2",value<string>(&parameters.other2_mixture),"other1 mixture file")
+       ("responsibility","flag to compute responsibility matrix")
   ;
   variables_map vm;
   store(command_line_parser(argc,argv).options(desc).run(),vm);
@@ -87,6 +88,12 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
     parameters.test = SET;
   } else {
     parameters.test = UNSET;
+  }
+
+  if (vm.count("responsibility")) {
+    parameters.compute_responsibility_matrix = SET;
+  } else {
+    parameters.compute_responsibility_matrix = UNSET;
   }
 
   if (vm.count("experiments")) {
@@ -680,7 +687,7 @@ void TestFunctions()
 {
   Test test;
 
-  test.fisher();
+  //test.fisher();
 
   //test.determinant();
 
@@ -689,6 +696,8 @@ void TestFunctions()
   //test.all_estimates_univariate();
 
   //test.all_estimates();
+
+    test.factor_analysis_spiral_data();
 }
 
 void RunExperiments(int iterations)
@@ -699,13 +708,35 @@ void RunExperiments(int iterations)
   //experiments.simulate(5);
 
   //experiments.infer_components_exp1();
+  //experiments.infer_components_exp1a();
   //experiments.infer_components_exp2();
+  //experiments.infer_components_exp2a();
 
   //experiments.infer_components_exp1_compare();
+  //experiments.infer_components_exp1a_compare();
   //experiments.infer_components_exp2_compare();
+  //experiments.infer_components_exp2a_compare();
 
-  experiments.infer_components_increasing_sample_size_exp3();
+  //experiments.infer_components_increasing_sample_size_exp3();
   //experiments.infer_components_increasing_sample_size_exp4();
+  //experiments.infer_components_increasing_sample_size_exp4a();
+
+  //experiments.infer_components_exp_spiral();
+  experiments.infer_components_exp_spiral_compare();
+}
+
+void computeResponsibilityGivenMixture(struct Parameters &parameters)
+{
+  std::vector<Vector> coordinates;
+  bool success = gatherData(parameters,coordinates);
+  if (success) {
+    Mixture mixture;
+    mixture.load(parameters.mixture_file,parameters.D);
+    mixture.computeResponsibilityMatrix(coordinates,parameters.infer_log);
+  } else {
+    cout << "Something wrong in reading data ...\n";
+    exit(1);
+  }
 }
 
 std::vector<std::vector<TwoPairs> > generatePairs(int D)
@@ -743,18 +774,18 @@ std::vector<std::vector<TwoPairs> > generatePairs(int D)
 
 void deal_with_improper_covariances(Matrix &A, Matrix &inv, long double &det)
 {
-  /*cout << "before fixing ...\n";
+  cout << "before fixing ...\n";
   cout << "cov: " << A << endl;
   cout << "inverse: " << inv << endl;
-  cout << "det_cov: " << det << endl;*/
+  cout << "det_cov: " << det << endl;
 
   int D = A.size1();
   Vector eigen_values(D,0);
   Matrix V = IdentityMatrix(D,D);
   eigenDecomposition(A,eigen_values,V);
 
-  /*cout << "eigen_values: "; print(cout,eigen_values,0); cout << endl;
-  cout << "V: " << V << endl;*/
+  cout << "eigen_values: "; print(cout,eigen_values,0); cout << endl;
+  cout << "V: " << V << endl;
 
   Matrix diag = ZeroMatrix(D,D);
   for (int i=0; i<D; i++) {
@@ -771,10 +802,62 @@ void deal_with_improper_covariances(Matrix &A, Matrix &inv, long double &det)
   A = prod(tmp1,Vt);
   invertMatrix(A,inv,det);
 
-  /*cout << "after fixing ...\n";
+  cout << "after fixing ...\n";
   cout << "cov: " << A << endl;
   cout << "inverse: " << inv << endl;
-  cout << "det_cov: " << det << endl;*/
+  cout << "det_cov: " << det << endl;
+}
+
+// D  = 3
+std::vector<Vector> generate_spiral_data(int N)
+{
+  Vector emptyvec(3,0);
+  std::vector<Vector> data(N,emptyvec);
+  long double ti;
+  Vector ni;
+  Normal normal(0,1);
+  for (int i=0; i<N; i++) {
+    ti = uniform_random() * 4 * PI;
+    ni = normal.generate(3);
+    data[i][0] = (13 - 0.5 * ti) * cos(ti) + ni[0];
+    data[i][1] = (0.5 * ti - 13) * sin(ti) + ni[1];
+    data[i][2] = ti  + ni[2];
+  }
+  writeToFile("random_sample.dat",data);
+  return data;
+}
+
+// cov = LL' +  Psi
+bool factor_analysis_3d(Matrix &cov, Vector &L, Matrix &Psi)
+{
+  L = Vector(3,0);
+  Psi = ZeroMatrix(3,3);
+  long double product = cov(0,1) * cov(0,2) * cov(1,2);
+  if (product < 0) {
+    cout << "product: " << product << endl;
+    cout << "cov: " << cov << endl;
+    return 0;
+  }
+  long double a1a2a3 = sqrt(product);
+  long double a1 = a1a2a3 / cov(1,2);
+  long double a2 = a1a2a3 / cov(0,2);
+  long double a3 = a1a2a3 / cov(0,1);
+
+  if (!(cov(0,1) >= 0 && cov(0,2) >= 0 && cov(1,2) >= 0)) {
+    if (cov(0,1) < 0 && cov(0,2) < 0) {
+      a1 *= -1;
+    } else if (cov(0,1) < 0 && cov(1,2) < 0) {
+      a2 *= -1;
+    } else if (cov(0,2) < 0 && cov(1,2) < 0) {
+      a3 *= -1;
+    }
+  }
+
+  L[0] = a1; L[1] = a2; L[2] = a3;
+  for (int i=0; i<3; i++) {
+    Psi(i,i) = cov(i,i) - (L[i]*L[i]);
+  }
+  return 1;
 }
 
 ////////////////////// GEOMETRY FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -1727,7 +1810,7 @@ void simulateMixtureModel(struct Parameters &parameters)
 std::pair<Vector,Vector> compareMixtures(struct Parameters &parameters)
 {
   Mixture original,other1,other2;
-  std::vector<Vector> data;
+  std::vector<Vector> data,Data;
   Vector dw;
   long double upper,lower,kldiv,msg,msg_approx;
   std::pair<Vector,Vector> results;
@@ -1735,6 +1818,7 @@ std::pair<Vector,Vector> compareMixtures(struct Parameters &parameters)
 
   if (TRUE_MIX == SET) {
     original.load(parameters.true_mixture,parameters.D);
+    //Data = original.generate(parameters.sample_size,1);
   }
 
   if (parameters.read_profiles == SET) {
@@ -1747,6 +1831,7 @@ std::pair<Vector,Vector> compareMixtures(struct Parameters &parameters)
     data = original.generate(parameters.sample_size,1);
   }
   dw = Vector(data.size(),1);
+  Data = data;
 
   if (TRUE_MIX == SET) {
     original.load(parameters.true_mixture,parameters.D,data,dw);
@@ -1779,7 +1864,7 @@ std::pair<Vector,Vector> compareMixtures(struct Parameters &parameters)
     msglens.push_back(msg_approx);
 
     if (TRUE_MIX == SET) {
-      kldiv = original.computeKLDivergence(other1,data);
+      kldiv = original.computeKLDivergence(other1,Data);
       cout << "kldiv (data): " << kldiv << endl;
       kldivs.push_back(kldiv);
       kldiv = original.computeKLDivergenceUpperBound(other1); upper = kldiv;
@@ -1802,7 +1887,7 @@ std::pair<Vector,Vector> compareMixtures(struct Parameters &parameters)
     msglens.push_back(msg_approx);
 
     if (TRUE_MIX == SET) {
-      kldiv = original.computeKLDivergence(other2,data);
+      kldiv = original.computeKLDivergence(other2,Data);
       cout << "kldiv (data): " << kldiv << endl;
       kldivs.push_back(kldiv);
       kldiv = original.computeKLDivergenceUpperBound(other2); upper = kldiv;

@@ -141,3 +141,23 @@ void Test::all_estimates()
   mvnorm_est.computeAllEstimators(random_sample,estimates,1);*/
 }
 
+// D = 3
+void Test::factor_analysis_spiral_data()
+{
+  int N = 900;
+  std::vector<Vector> data = generate_spiral_data(N);
+  Vector dw(N,1);
+  Vector mean;
+  Matrix cov;
+  computeMeanAndCovariance(data,dw,mean,cov);
+  cout << "cov: " << cov << endl;
+
+  Vector L;
+  Matrix Psi;
+  factor_analysis_3d(cov,L,Psi);
+
+  Matrix LL = outer_prod(L,L);
+  Matrix rhs = LL + Psi;
+  cout << "LL'+Psi: " << rhs << endl;
+}
+

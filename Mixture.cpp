@@ -417,8 +417,7 @@ void Mixture::initialize4()
   init_means[1] = Vector(D,0);
   long double add;
   for (int i=0; i<D; i++) {
-    //add = sqrt(eigen_values[max_eig]) * projection_axis[i];
-    add = eigen_values[max_eig] * projection_axis[i];
+    add = sqrt(eigen_values[max_eig]) * projection_axis[i];
     init_means[0][i] = mean[i] + add; 
     init_means[1][i] = mean[i] - add;
   }
@@ -458,13 +457,13 @@ void Mixture::initialize4()
 
   sample_size = Vector(K,0);
   updateEffectiveSampleSize();
-  for (int i=0; i<K; i++) {
+  /*for (int i=0; i<K; i++) {
     if (sample_size[i] < MIN_N) {
       cout << "... initialize4 failed ...\n"; sleep(5);
       initialize();
       return;
     }
-  }
+  }*/
   weights = Vector(K,0);
   updateWeights();
 
@@ -676,6 +675,12 @@ void Mixture::computeResponsibilityMatrix(std::vector<Vector> &sample,
       out << fixed << setw(10) << setprecision(5) << resp[j][i];
     }
     out << endl;
+  }
+  out << "Cumulative memberships:\n";\
+  long double comp_sum;
+  for (int j=0; j<K; j++) {
+    comp_sum = computeSum(resp[j]);
+    out << "Component " << j+1 << ": " << comp_sum << endl;
   }
   out.close();
 }
