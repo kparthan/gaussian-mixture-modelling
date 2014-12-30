@@ -366,13 +366,13 @@ void Mixture::initialize3()
     }
   } // iter
   //cout << "init_means: ";
-  for (int i=0; i<K; i++) {
+  /*for (int i=0; i<K; i++) {
     print(cout,init_means[i],3);
   }
-  //cout << "\nk_means: ";
+  cout << "\nk_means: " << K << "\t";
   for (int i=0; i<K; i++) {
     print(cout,means[i],3);
-  } cout << endl;
+  } cout << endl;*/
 
   sample_size = Vector(K,0);
   updateEffectiveSampleSize();
@@ -421,6 +421,9 @@ void Mixture::initialize4()
     init_means[0][i] = mean[i] + add; 
     init_means[1][i] = mean[i] - add;
   }
+  cout << "projection_axis: "; print(cout,projection_axis,3); cout << endl;
+  cout << "init_means[0]: "; print(cout,init_means[0],3); cout << endl;
+  cout << "init_means[1]: "; print(cout,init_means[1],3); cout << endl;
 
   /*std::vector<Vector> x_mu(N);
   Vector diff(D,0);
