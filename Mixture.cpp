@@ -1399,6 +1399,10 @@ Mixture Mixture::split(int c, ostream &log)
     log << "\t\tIGNORING SPLIT ... \n\n";
   } else {
     merged.EM();
+    Vector ss = merged.getSampleSize();
+    for (int i=0; i<ss.size(); i++) {
+      if (ss[i] <= MIN_N) IGNORE_SPLIT = 1;
+    }
     log << "\t\tAfter adjustment ...\n";
     merged.computeMinimumMessageLength();
     merged.printParameters(log,2);

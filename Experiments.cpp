@@ -284,7 +284,7 @@ void Experiments::infer_components_exp1a_compare()
     
     output = "./experiments/infer_components/exp1a/comparisons/msglens_" + delta_str;
     ofstream out1(output.c_str());
-    output = "./experiments/infer_components/exp1a/comparisons/kldivs_" + delta_str;
+    output = "./experiments/infer_components/exp1a/comparisons/kldivs2_" + delta_str;
     ofstream out2(output.c_str());
     for (int iter=1; iter<=iterations; iter++) {
       iter_str = boost::lexical_cast<string>(iter);
@@ -428,7 +428,7 @@ void Experiments::infer_components_exp2_compare()
     
     output = "./experiments/infer_components/exp2/comparisons/msglens_" + delta_str;
     ofstream out1(output.c_str());
-    output = "./experiments/infer_components/exp2/comparisons/kldivs_" + delta_str;
+    output = "./experiments/infer_components/exp2/comparisons/kldivs2_" + delta_str;
     ofstream out2(output.c_str());
     for (int iter=1; iter<=iterations; iter++) {
       iter_str = boost::lexical_cast<string>(iter);
@@ -470,7 +470,6 @@ void Experiments::infer_components_exp2a_compare()
   iterations = 50;
   int D = 10;
   int precision = 0;
-  //long double delta = 1.60;
 
   string folder1 = "./experiments/infer_components/exp2a/";
   string folder2 = "./support/mixturecode2/exp2a/";
@@ -511,7 +510,7 @@ void Experiments::infer_components_exp2a_compare()
     
     output = "./experiments/infer_components/exp2a/comparisons/msglens_" + delta_str;
     ofstream out1(output.c_str());
-    output = "./experiments/infer_components/exp2a/comparisons/kldivs_" + delta_str;
+    output = "./experiments/infer_components/exp2a/comparisons/kldivs2_" + delta_str;
     ofstream out2(output.c_str());
     for (int iter=1; iter<=iterations; iter++) {
       iter_str = boost::lexical_cast<string>(iter);
