@@ -674,6 +674,17 @@ int maximumIndex(Vector &values)
   return max_index;
 }
 
+long double absolute_maximum(std::vector<Vector> &data)
+{
+  long double max = fabs(data[0][0]);
+  for (int i=0; i<data.size(); i++) {
+    for (int j=0; j<data[0].size(); j++) {
+      if (fabs(data[i][j]) > max) max = fabs(data[i][j]);
+    }
+  }
+  return max;
+}
+
 /*!
  *  \brief This function sets the estimation method.
  *  \param estimation an integer
@@ -711,11 +722,15 @@ void RunExperiments(int iterations)
   //experiments.infer_components_exp1a();
   //experiments.infer_components_exp2();
   //experiments.infer_components_exp2a();
+  //experiments.infer_components_exp2b();
+  //experiments.infer_components_exp2c();
 
   //experiments.infer_components_exp1_compare();
   //experiments.infer_components_exp1a_compare();
   //experiments.infer_components_exp2_compare();
-  experiments.infer_components_exp2a_compare();
+  //experiments.infer_components_exp2a_compare();
+  //experiments.infer_components_exp2b_compare();
+  experiments.infer_components_exp2c_compare();
 
   //experiments.infer_components_increasing_sample_size_exp3();
   //experiments.infer_components_increasing_sample_size_exp4();
@@ -2015,12 +2030,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
   Vector sample_size;
   std::vector<Mixture> splits;
 
-  /*if (D >= 10) {
-    MIN_N = 2 * (D + 3);
-  } else {
-    MIN_N = D + 3;
-  }*/
-  MIN_N = (D + 3);
+  MIN_N = 0.25 * D * (D + 3);
 
   improved = mixture;
   TOTAL_ITERATIONS = 0;
@@ -2066,31 +2076,12 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
           splits.push_back(modified);
           if (IGNORE_SPLIT == 0) {
             updateInference(modified,improved,N,log,SPLIT);
+          } else {
+            log << "\t\tIGNORING SPLIT ... \n\n";
           }
         }
       } // for()
     }
-    /*if (improved == parent && TERMINATE == 1) goto finish;
-    if (improved == parent && TERMINATE == 0) {
-      TERMINATE = 1;
-      Mixture best_split = splits[0];
-      long double best_msglen = best_split.getMinimumMessageLength();
-      for (int i=1; i<splits.size(); i++) {
-        if (splits[i].getMinimumMessageLength() < best_msglen) {
-          best_msglen = splits[i].getMinimumMessageLength();
-          best_split = splits[i];
-        }
-      }
-      log << "Trying a not so good split ...\n\n";
-      Mixture new_mix = inferComponents(best_split,N,D,log);
-      if (new_mix.getMinimumMessageLength() < parent.getMinimumMessageLength()) {
-        log << "success\n";
-        Mixture new_mix2 = inferComponents(new_mix,N,D,log);
-        if (new_mix2.getNumberOfComponents() > new_mix.getNumberOfComponents() && new_mix2.getMinimumMessageLength() < best_split.getMinimumMessageLength()) {
-          return new_mix2;
-       } else return new_mix; 
-      }
-    }*/ 
     if (improved == parent) goto finish;
   } // if (improved == parent || iter%2 == 0) loop
 

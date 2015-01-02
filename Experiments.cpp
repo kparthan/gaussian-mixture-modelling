@@ -355,14 +355,42 @@ void Experiments::infer_components_exp2()
 void Experiments::infer_components_exp2a()
 {
   iterations = 50;
-  int N = 50;
+  int N = 100;
   int D = 10;
-  int precision = 0;
-  //long double delta = 1.60;
+  int precision = 2;
 
   struct Parameters parameters = setParameters(N,D);
     
   string results_folder = "./experiments/infer_components/exp2a/";
+  for (long double delta=1.10; delta<=1.61; delta+=0.05) {
+    Vector mu1(D,0);
+    Vector mu2(D,delta);
+    Matrix C1 = IdentityMatrix(D,D);
+    Matrix C2 = IdentityMatrix(D,D);
+
+    MultivariateNormal mvnorm1(mu1,C1);
+    MultivariateNormal mvnorm2(mu2,C2);
+
+    Vector weights(2,0.5);
+    std::vector<MultivariateNormal> components;
+    components.push_back(mvnorm1);
+    components.push_back(mvnorm2);
+    Mixture original(2,components,weights);
+    //generateExperimentalMixtures(original,delta,results_folder,N,precision);
+    inferExperimentalMixtures(original,delta,results_folder,parameters,precision);
+  }
+}
+
+void Experiments::infer_components_exp2b()
+{
+  iterations = 50;
+  int N = 50;
+  int D = 10;
+  int precision = 0;
+
+  struct Parameters parameters = setParameters(N,D);
+    
+  string results_folder = "./experiments/infer_components/exp2b/";
   for (long double delta=10; delta<=1001; delta*=10) {
     Vector mu1(D,0);
     Vector mu2(D,delta);
@@ -377,6 +405,39 @@ void Experiments::infer_components_exp2a()
     components.push_back(mvnorm1);
     components.push_back(mvnorm2);
     Mixture original(2,components,weights);
+    //generateExperimentalMixtures(original,delta,results_folder,N,precision);
+    inferExperimentalMixtures(original,delta,results_folder,parameters,precision);
+  }
+}
+
+void Experiments::infer_components_exp2c()
+{
+  iterations = 50;
+  int N = 100;
+  int D = 10;
+  int precision = 0;
+
+  struct Parameters parameters = setParameters(N,D);
+    
+  string results_folder = "./experiments/infer_components/exp2c/";
+  for (long double delta=10; delta<=1001; delta*=10) {
+    Vector mu1(D,0);
+    Vector mu2(D,delta);
+    Vector mu3(D,-delta);
+    Matrix C1 = IdentityMatrix(D,D);
+    Matrix C2 = IdentityMatrix(D,D);
+    Matrix C3 = IdentityMatrix(D,D);
+
+    MultivariateNormal mvnorm1(mu1,C1);
+    MultivariateNormal mvnorm2(mu2,C2);
+    MultivariateNormal mvnorm3(mu3,C3);
+
+    Vector weights(3,0.333333);
+    std::vector<MultivariateNormal> components;
+    components.push_back(mvnorm1);
+    components.push_back(mvnorm2);
+    components.push_back(mvnorm3);
+    Mixture original(3,components,weights);
     //generateExperimentalMixtures(original,delta,results_folder,N,precision);
     inferExperimentalMixtures(original,delta,results_folder,parameters,precision);
   }
@@ -469,10 +530,92 @@ void Experiments::infer_components_exp2a_compare()
 {
   iterations = 50;
   int D = 10;
-  int precision = 0;
+  int precision = 2;
 
   string folder1 = "./experiments/infer_components/exp2a/";
   string folder2 = "./support/mixturecode2/exp2a/";
+  string true_mix,mix1_file,mix2_file,data_file;
+  string delta_str,iter_str,output;
+  struct Parameters parameters;
+  std::pair<Vector,Vector> results;
+  Vector msglens,kldivs;
+
+  for (long double delta=1.10; delta<=1.61; delta+=0.05) {
+    Vector mu1(D,0);
+    Vector mu2(D,delta);
+    Matrix C1 = IdentityMatrix(D,D);
+    Matrix C2 = IdentityMatrix(D,D);
+
+    MultivariateNormal mvnorm1(mu1,C1);
+    MultivariateNormal mvnorm2(mu2,C2);
+
+    Vector weights(2,0.5);
+    std::vector<MultivariateNormal> components;
+    components.push_back(mvnorm1);
+    components.push_back(mvnorm2);
+    Mixture original(2,components,weights);
+
+    std::ostringstream ss;
+    ss << fixed << setprecision(precision);
+    ss << delta;
+    delta_str = "delta_" + ss.str();
+
+    true_mix = "./simulation/mixture_" + delta_str;
+    ofstream mix(true_mix.c_str());
+    for (int i=0; i<2; i++) {
+      mix << fixed << setw(10) << setprecision(5) << weights[i];
+      mix << "\t";
+      components[i].printParameters(mix);
+    }
+    mix.close();
+    
+    output = "./experiments/infer_components/exp2a/comparisons/msglens_" + delta_str;
+    ofstream out1(output.c_str());
+    output = "./experiments/infer_components/exp2a/comparisons/kldivs2_" + delta_str;
+    ofstream out2(output.c_str());
+    for (int iter=1; iter<=iterations; iter++) {
+      iter_str = boost::lexical_cast<string>(iter);
+      //data_file = folder1 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+      data_file = folder2 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+      mix1_file = folder1 + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
+      mix2_file = folder2 + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
+      cout << "data_file: " << data_file << endl;
+      cout << "mix1: " << mix1_file << endl;
+      cout << "mix2: " << mix2_file << endl;
+
+      parameters.comparison = SET;
+      TRUE_MIX = SET; COMPARE1 = UNSET; COMPARE2 = SET;
+      parameters.true_mixture = true_mix;
+      parameters.other1_mixture = mix1_file;
+      parameters.other2_mixture = mix2_file;
+      parameters.read_profiles = SET;
+      parameters.profile_file = data_file;
+      parameters.D = D;
+      results = compareMixtures(parameters);
+      msglens = results.first; //print(cout,msglens,3);
+      for (int i=0; i<msglens.size(); i++) {
+        out1 << fixed << scientific << setprecision(6) << msglens[i] << "\t\t";
+      }
+      out1 << endl;
+      kldivs = results.second; //print(cout,kldivs,3);
+      for (int i=0; i<kldivs.size(); i++) {
+        out2 << fixed << scientific << setprecision(6) << kldivs[i] << "\t\t";
+      }
+      out2 << endl;
+    }
+    out1.close();
+    out2.close();
+  }
+}
+
+void Experiments::infer_components_exp2b_compare()
+{
+  iterations = 50;
+  int D = 10;
+  int precision = 0;
+
+  string folder1 = "./experiments/infer_components/exp2b/";
+  string folder2 = "./support/mixturecode2/exp2b/";
   string true_mix,mix1_file,mix2_file,data_file;
   string delta_str,iter_str,output;
   struct Parameters parameters;
@@ -508,14 +651,100 @@ void Experiments::infer_components_exp2a_compare()
     }
     mix.close();
     
-    output = "./experiments/infer_components/exp2a/comparisons/msglens_" + delta_str;
+    output = "./experiments/infer_components/exp2b/comparisons/msglens_" + delta_str;
     ofstream out1(output.c_str());
-    output = "./experiments/infer_components/exp2a/comparisons/kldivs2_" + delta_str;
+    output = "./experiments/infer_components/exp2b/comparisons/kldivs2_" + delta_str;
     ofstream out2(output.c_str());
     for (int iter=1; iter<=iterations; iter++) {
       iter_str = boost::lexical_cast<string>(iter);
-      data_file = folder1 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
-      //data_file = folder2 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+      //data_file = folder1 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+      data_file = folder2 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+      mix1_file = folder1 + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
+      mix2_file = folder2 + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
+      cout << "data_file: " << data_file << endl;
+      cout << "mix1: " << mix1_file << endl;
+      cout << "mix2: " << mix2_file << endl;
+
+      parameters.comparison = SET;
+      TRUE_MIX = SET; COMPARE1 = UNSET; COMPARE2 = SET;
+      parameters.true_mixture = true_mix;
+      parameters.other1_mixture = mix1_file;
+      parameters.other2_mixture = mix2_file;
+      parameters.read_profiles = SET;
+      parameters.profile_file = data_file;
+      parameters.D = D;
+      results = compareMixtures(parameters);
+      msglens = results.first; //print(cout,msglens,3);
+      for (int i=0; i<msglens.size(); i++) {
+        out1 << fixed << scientific << setprecision(6) << msglens[i] << "\t\t";
+      }
+      out1 << endl;
+      kldivs = results.second; //print(cout,kldivs,3);
+      for (int i=0; i<kldivs.size(); i++) {
+        out2 << fixed << scientific << setprecision(6) << kldivs[i] << "\t\t";
+      }
+      out2 << endl;
+    }
+    out1.close();
+    out2.close();
+  }
+}
+
+void Experiments::infer_components_exp2c_compare()
+{
+  iterations = 50;
+  int D = 10;
+  int precision = 0;
+
+  string folder1 = "./experiments/infer_components/exp2c/";
+  string folder2 = "./support/mixturecode2/exp2c/";
+  string true_mix,mix1_file,mix2_file,data_file;
+  string delta_str,iter_str,output;
+  struct Parameters parameters;
+  std::pair<Vector,Vector> results;
+  Vector msglens,kldivs;
+
+  for (long double delta=10; delta<=1001; delta*=10) {
+    Vector mu1(D,0);
+    Vector mu2(D,delta);
+    Vector mu3(D,-delta);
+    Matrix C1 = IdentityMatrix(D,D);
+    Matrix C2 = IdentityMatrix(D,D);
+    Matrix C3 = IdentityMatrix(D,D);
+
+    MultivariateNormal mvnorm1(mu1,C1);
+    MultivariateNormal mvnorm2(mu2,C2);
+    MultivariateNormal mvnorm3(mu3,C3);
+
+    Vector weights(3,0.333333);
+    std::vector<MultivariateNormal> components;
+    components.push_back(mvnorm1);
+    components.push_back(mvnorm2);
+    components.push_back(mvnorm3);
+    Mixture original(3,components,weights);
+
+    std::ostringstream ss;
+    ss << fixed << setprecision(precision);
+    ss << delta;
+    delta_str = "delta_" + ss.str();
+
+    true_mix = "./simulation/mixture_" + delta_str;
+    ofstream mix(true_mix.c_str());
+    for (int i=0; i<3; i++) {
+      mix << fixed << setw(10) << setprecision(5) << weights[i];
+      mix << "\t";
+      components[i].printParameters(mix);
+    }
+    mix.close();
+    
+    output = "./experiments/infer_components/exp2c/comparisons/msglens_" + delta_str;
+    ofstream out1(output.c_str());
+    output = "./experiments/infer_components/exp2c/comparisons/kldivs2_" + delta_str;
+    ofstream out2(output.c_str());
+    for (int iter=1; iter<=iterations; iter++) {
+      iter_str = boost::lexical_cast<string>(iter);
+      //data_file = folder1 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+      data_file = folder2 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
       mix1_file = folder1 + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
       mix2_file = folder2 + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
       cout << "data_file: " << data_file << endl;
@@ -593,9 +822,9 @@ void Experiments::inferExperimentalMixtures(
     infer_log = results_folder + "logs/" + delta_str + "/mvnorm_iter_" + iter_str + ".log";
     parameters.infer_log = infer_log;
 
-    data_file = results_folder + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
-    //data_file = "./support/mixturecode2/exp1a/data/" + delta_str + "/"
-    //            + "mvnorm_iter_" + iter_str + ".dat";
+    //data_file = results_folder + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
+    data_file = "./support/mixturecode2/exp2c/data/" + delta_str + "/"
+                + "mvnorm_iter_" + iter_str + ".dat";
     cout << "data_file: " << data_file << endl;
     data = load_matrix(data_file,parameters.D);
 
@@ -625,7 +854,7 @@ void Experiments::inferExperimentalMixtures(
   }
   avg_number = computeMean(inferred);
   variance = computeVariance(inferred);
-  summary << "\nsuccess rate: " << setprecision(2) 
+  summary << "\nsuccess rate: " //<< setprecision(2) 
           << num_success * 100 / (long double)(iterations) << " %\n";
   summary << "Avg: " << avg_number << endl;
   summary << "Variance: " << variance << endl;

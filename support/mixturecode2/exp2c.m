@@ -1,38 +1,40 @@
 clear
 iterations = 50;
-formatspec = '%.1f';
-for delta=1.8:0.1:2.65
-  %delta = 1.8
-  pp = [0.5];
-  mu1 = [0 0];
-  mu2 = [delta 0];
-  mu = [mu1' mu2'];
+formatspec = '%.0f';
+delta = 10;
+while delta < 1001
+  pp = [0.333333 0.333333];
+  mu1 = zeros(1,10);
+  mu2 = delta * ones(1,10);
+  mu3 = -delta * ones(1,10);
+  mu = [mu1' mu2' mu3'];
   clear covar;
-  covar(:,:,1) = [1 0; 0 1];
-  covar(:,:,2) = [1 0; 0 1];
+  covar(:,:,1) = eye(10);
+  covar(:,:,2) = eye(10);
+  covar(:,:,3) = eye(10);
   
   delta_str = num2str(delta,formatspec);
-  common_file_prefix = strcat('./exp1a/data/delta_',delta_str,'/mvnorm_iter_');
-  summary_file = strcat('./exp1a/summary/delta_',delta_str);
+  common_file_prefix = strcat('./exp2c/data/delta_',delta_str,'/mvnorm_iter_');
+  summary_file = strcat('./exp2c/summary/delta_',delta_str);
   summary = fopen(summary_file,'w');
-  params_file = strcat('./exp1a/summary/delta_',delta_str,'_parameters');
+  params_file = strcat('./exp2c/summary/delta_',delta_str,'_parameters');
   parameters = fopen(params_file,'w');
-  data_folder = strcat('./exp1a/data/delta_',delta_str);
+  data_folder = strcat('./exp2c/data/delta_',delta_str);
   success_rate = 0;
-  inferred = []
+  inferred = [];
   for iter = 1:iterations
     iter_str = int2str(iter);
     data_file = strcat(data_folder,'/mvnorm_iter_',iter_str,'.dat')
     sample = load(data_file);
     y = sample';
-    %y = genmix(100,mu,covar,pp);
+%    y = genmix(100,mu,covar,pp);
     [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-5,0)
-    %sample = y';
-    if (bestk == 2)
+%    sample = y';
+    if (bestk == 3)
       success_rate = success_rate + 1;
     end
-    %file_name = strcat(common_file_prefix,iter_str,'.dat');
-    %save(file_name,'sample','-ascii');
+%    file_name = strcat(common_file_prefix,iter_str,'.dat');
+%    save(file_name,'sample','-ascii');
     fprintf(summary,'%6d %6d %6d\n',iter,bestk,countf);
     fprintf(parameters,'\nIter: %d\n',iter);
     fprintf(parameters,'bestpp:\n');
@@ -41,7 +43,7 @@ for delta=1.8:0.1:2.65
     fprintf(parameters,'%f ',bestmu); fprintf(parameters,'\n')
     fprintf(parameters,'bestcov:\n');
     fprintf(parameters,'%f ',bestcov); fprintf(parameters,'\n')
-    mix_file = strcat('./exp1a/mixtures/delta_',delta_str,'/mvnorm_iter_',iter_str);
+    mix_file = strcat('./exp2c/mixtures/delta_',delta_str,'/mvnorm_iter_',iter_str);
     mixout = fopen(mix_file,'w');
     inferred = [inferred bestk];
     for k=1:bestk
@@ -50,7 +52,7 @@ for delta=1.8:0.1:2.65
       cov_est = bestcov(:,:,k);
       fprintf(mixout,'\t%.5f\t\t',w);
       fprintf(mixout,'[mu]: (');
-      D = 2;
+      D = 10;
       for i=1:D-1
         fprintf(mixout,'%.6e, ',mu_est(i,1));
       end
@@ -74,4 +76,5 @@ for delta=1.8:0.1:2.65
   fprintf(summary,'Variance:%f\n',variance);
   fclose(summary);
   fclose(parameters);
+  delta = delta * 10;
 end

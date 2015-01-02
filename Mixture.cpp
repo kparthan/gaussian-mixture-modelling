@@ -741,6 +741,7 @@ long double Mixture::computeMinimumMessageLength(int verbose /* default = 1 (pri
   MSGLEN_FAIL = 0;
   part1 = 0;
   part2 = 0;
+  minimum_msglen = 0;
 
   /****************** PART 1 *********************/
 
@@ -794,6 +795,7 @@ long double Mixture::computeMinimumMessageLength(int verbose /* default = 1 (pri
   //cout << "Il: " << Il << endl;
   //assert(Il > 0);
   if (Il < 0 || boost::math::isnan(Il)) {
+    cout << "isnan(Il)\n"; sleep(5);
     minimum_msglen = LARGE_NUMBER;
     MSGLEN_FAIL = 1;
     return minimum_msglen;
@@ -911,7 +913,7 @@ void Mixture::EM()
 
   long double prev=0,current;
   int iter = 1;
-  printParameters(log,0,0);
+  printParameters(log,0,minimum_msglen);
 
   long double impr_rate = 0.00001;
   /* EM loop */
@@ -1358,9 +1360,9 @@ Mixture Mixture::split(int c, ostream &log)
       sum += responsibility_c[i][j];
     }
     sample_size_c[i] = sum;
-    if (sample_size_c[i] < MIN_N) {
+    /*if (sample_size_c[i] < MIN_N) {
       IGNORE_SPLIT = 1;
-    }
+    }*/
   }
 
   // child components
@@ -1395,19 +1397,11 @@ Mixture Mixture::split(int c, ostream &log)
   log << "\t\tBefore adjustment ...\n";
   merged.computeMinimumMessageLength();
   merged.printParameters(log,2);
-  if (IGNORE_SPLIT == 1) {
-    log << "\t\tIGNORING SPLIT ... \n\n";
-  } else {
-    merged.EM();
-    Vector ss = merged.getSampleSize();
-    for (int i=0; i<ss.size(); i++) {
-      if (ss[i] <= MIN_N) IGNORE_SPLIT = 1;
-    }
-    log << "\t\tAfter adjustment ...\n";
-    merged.computeMinimumMessageLength();
-    merged.printParameters(log,2);
-    merged.printIndividualMsgLengths(log);
-  }
+  merged.EM();
+  log << "\t\tAfter adjustment ...\n";
+  merged.computeMinimumMessageLength();
+  merged.printParameters(log,2);
+  merged.printIndividualMsgLengths(log);
   SPLITTING = 0;
   return merged;
 }
@@ -1498,6 +1492,7 @@ Mixture Mixture::kill(int c, ostream &log)
   log << "\t\tAfter adjustment ...\n";
   //modified.computeMinimumMessageLength();
   modified.printParameters(log,2);
+  modified.printIndividualMsgLengths(log);
   return modified;
 }
 

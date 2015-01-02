@@ -83,6 +83,7 @@ Vector computeMeans(std::vector<Vector> &);
 long double computeVariance(Vector &);
 int minimumIndex(Vector &);
 int maximumIndex(Vector &);
+long double absolute_maximum(std::vector<Vector> &);
 void setEstimationMethod(int);
 void TestFunctions();
 void RunExperiments(int);

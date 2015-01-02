@@ -1,8 +1,7 @@
 clear
 iterations = 50;
-formatspec = '%.0f';
-delta = 10;
-while delta < 1001
+formatspec = '%.2f';
+for delta=1.10:0.05:1.61
   pp = [0.5];
   mu1 = zeros(1,10);
   mu2 = delta * ones(1,10);
@@ -15,17 +14,17 @@ while delta < 1001
   common_file_prefix = strcat('./exp2a/data/delta_',delta_str,'/mvnorm_iter_');
   summary_file = strcat('./exp2a/summary/delta_',delta_str);
   summary = fopen(summary_file,'w');
-  params_file = strcat('./exp2a/summary/delta_',delta_str,'_parameters')
+  params_file = strcat('./exp2a/summary/delta_',delta_str,'_parameters');
   parameters = fopen(params_file,'w');
-  data_folder = strcat('../../experiments/infer_components/exp2a/data/delta_',delta_str);
+  data_folder = strcat('./exp2a/data/delta_',delta_str);
   success_rate = 0;
-  inferred = []
+  inferred = [];
   for iter = 1:iterations
     iter_str = int2str(iter);
     data_file = strcat(data_folder,'/mvnorm_iter_',iter_str,'.dat')
     sample = load(data_file);
     y = sample';
-    %y = genmix(800,mu,covar,pp);
+    %y = genmix(100,mu,covar,pp);
     [bestk,bestpp,bestmu,bestcov,dl,countf] = mixtures4(y,1,25,0,1e-5,0)
     %sample = y';
     if (bestk == 2)
@@ -74,5 +73,4 @@ while delta < 1001
   fprintf(summary,'Variance:%f\n',variance);
   fclose(summary);
   fclose(parameters);
-  delta = delta * 10;
 end
