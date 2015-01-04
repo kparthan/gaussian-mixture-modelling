@@ -471,7 +471,6 @@ void Mixture::initialize4()
   updateWeights();
 
   // initialize parameters of each component
-  std::vector<Vector> responsibility2(K,tmp);
   for (int i=0; i<K; i++) {
     cov = computeCovariance(data,responsibility[i],init_means[i]);
     MultivariateNormal mvnorm(init_means[i],cov);
