@@ -2027,7 +2027,6 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
   std::vector<MultivariateNormal> components;
   Mixture modified,improved,parent;
   Vector sample_size;
-  std::vector<Mixture> splits;
 
   MIN_N = 0.25 * D * (D + 3);
 
@@ -2067,12 +2066,10 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
       } // join() ing nearest components
     } // if (K > 1) loop
     if (improved == parent) {
-      splits.clear();
       for (int i=0; i<K; i++) { // split() ...
         if (sample_size[i] > MIN_N) {
           IGNORE_SPLIT = 0;
           modified = parent.split(i,log);
-          splits.push_back(modified);
           if (IGNORE_SPLIT == 0) {
             updateInference(modified,improved,N,log,SPLIT);
           } else {
