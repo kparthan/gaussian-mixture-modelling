@@ -1257,7 +1257,7 @@ std::vector<Vector> Mixture::generate(int num_samples, bool save_data)
   }
   fw.close();*/
   
-  std::vector<std::vector<std::vector<long double> > > random_data;
+  std::vector<std::vector<Vector> > random_data;
   std::vector<Vector> sample;
   for (int i=0; i<K; i++) {
     std::vector<Vector> x = components[i].generate((int)sample_size[i]);

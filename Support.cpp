@@ -20,7 +20,6 @@ int IGNORE_SPLIT;
 long double MIN_N;
 int STRATEGY;
 int MSGLEN_FAIL;
-int TERMINATE = 0;
 int TRUE_MIX,COMPARE1,COMPARE2;
 
 ////////////////////// GENERAL PURPOSE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
