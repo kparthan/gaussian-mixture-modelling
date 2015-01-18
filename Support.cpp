@@ -729,7 +729,7 @@ void RunExperiments(int iterations)
   //experiments.infer_components_exp2_compare();
   //experiments.infer_components_exp2a_compare();
   //experiments.infer_components_exp2b_compare();
-  experiments.infer_components_exp2c_compare();
+  //experiments.infer_components_exp2c_compare();
 
   //experiments.infer_components_increasing_sample_size_exp3();
   //experiments.infer_components_increasing_sample_size_exp4();
@@ -737,6 +737,8 @@ void RunExperiments(int iterations)
 
   //experiments.infer_components_exp_spiral();
   //experiments.infer_components_exp_spiral_compare();
+
+  experiments.plotMsglensDifferent();
 }
 
 void computeResponsibilityGivenMixture(struct Parameters &parameters)
@@ -1770,6 +1772,9 @@ void modelMixture(struct Parameters &parameters, std::vector<Vector> &data)
     // do the mixture modelling
     Mixture mixture(parameters.fit_num_components,data,data_weights);
     mixture.estimateParameters();
+    cout << "First part: " << mixture.first_part() << endl;
+    cout << "Second part: " << mixture.second_part() << endl;
+    cout << "First part: " << mixture.getMinimumMessageLength() << endl;
   }
 }
 
@@ -2235,3 +2240,57 @@ void updateInferenceProbabilistic(
   } // operation = split
 }
 
+void inferStableMixtures_MML(
+  std::vector<Vector> &data, 
+  int true_number,
+  int min_k, 
+  int max_k, 
+  string &log_file
+) {
+  long double mml,current_msglen,part1,part2,prev_msglen,prev_part2,prev_part1;
+  int num_repeats;
+  Mixture best_mix;
+  Vector data_weights(data.size(),1);
+  ESTIMATION = MML;
+
+  ofstream log(log_file.c_str());
+  string msglens_file = log_file + ".msglens.dat";
+  ofstream msglens(msglens_file.c_str());
+  string parts_file = log_file + ".parts.dat";
+  ofstream parts(parts_file.c_str());
+  for (int k=min_k; k<=max_k; k++) {
+    num_repeats = 0;
+    repeat:
+    Mixture mixture(k,data,data_weights);
+    mixture.estimateParameters();
+    current_msglen = mixture.getMinimumMessageLength();
+    part1 = mixture.first_part();
+    part2 = mixture.second_part();
+
+    /*if (k == true_number) { 
+      if (current_msglen >= prev_msglen) goto repeat;
+      mml = current_msglen;
+    }*/
+    if (k > true_number) { // check if current is better
+      if (current_msglen < prev_msglen && num_repeats <= 5) {
+        num_repeats++;
+        goto repeat;
+      }
+      if (num_repeats > 5) {
+        if (current_msglen <= mml) goto repeat;
+      }
+    }
+    mixture.printParameters(log,1);
+    prev_msglen = current_msglen;
+    prev_part1 = part1;
+    prev_part2 = part2;
+
+    msglens << fixed << setw(10) << k;
+    msglens << fixed << setw(15) << setprecision(3) << current_msglen << endl;
+
+    parts << fixed << setw(10) << k;
+    parts << fixed << setw(15) << setprecision(3) << part1;
+    parts << fixed << setw(15) << setprecision(3) << part2;
+    parts << fixed << setw(15) << setprecision(3) << part1+part2 << endl;
+  } // for loop ends ...
+}

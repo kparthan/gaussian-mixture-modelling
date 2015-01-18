@@ -39,6 +39,8 @@ class Experiments
 
     void infer_components_exp_spiral();
     void infer_components_exp_spiral_compare();
+
+    void plotMsglensDifferent();
 };
 
 #endif

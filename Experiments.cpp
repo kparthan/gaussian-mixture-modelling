@@ -1221,3 +1221,21 @@ void Experiments::infer_components_exp_spiral_compare()
   msg_comp.close();
 }
 
+void Experiments::plotMsglensDifferent()
+{
+  //int sample_size = 1000;
+  std::vector<Vector> data;
+  int K,D;
+  string mixture_file,log_file,folder,output,data_file;
+
+  //folder = "./experiments/infer_components/mix_example1/";
+  folder = "./experiments/infer_components/mix_example2/";
+
+  log_file = folder + "comparisons.log";
+  data_file = "random_sample.dat";
+  K = 4; D = 2;
+
+  data = load_matrix(data_file,D);
+  inferStableMixtures_MML(data,K,1,15,log_file);
+}
+

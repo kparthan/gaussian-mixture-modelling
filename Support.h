@@ -145,5 +145,7 @@ Mixture inferComponentsProbabilistic(Mixture &, int, int, ostream &);
 void updateInference(Mixture &, Mixture &, int, ostream &, int);
 void updateInferenceProbabilistic(Mixture &, Mixture &, int, ostream &, int);
 
+void inferStableMixtures_MML(std::vector<Vector> &, int, int, int, string &);
+
 #endif
 
