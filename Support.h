@@ -94,7 +94,7 @@ std::vector<Vector> generate_spiral_data(int);
 bool factor_analysis_3d(Matrix &, Vector &, Matrix &);
 
 // geometry functions
-std::vector<Vector> load_matrix(string &, int);
+std::vector<Vector> load_data_table(string &, int);
 long double normalize(Vector &, Vector &);
 long double norm(Vector &);
 void cartesian2spherical(Vector &, Vector &);
