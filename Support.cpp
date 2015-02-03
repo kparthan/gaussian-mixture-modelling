@@ -879,7 +879,7 @@ bool factor_analysis_3d(Matrix &cov, Vector &L, Matrix &Psi)
 ////////////////////// GEOMETRY FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 // not unit vectors ...
-std::vector<Vector> load_matrix(string &file_name, int D)
+std::vector<Vector> load_data_table(string &file_name, int D)
 {
   std::vector<Vector> sample;
   ifstream file(file_name.c_str());

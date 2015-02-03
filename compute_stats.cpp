@@ -24,7 +24,7 @@ struct Parameters
   int n,d;
 };
 
-std::vector<Vector> load_matrix(string &file_name, int D)
+std::vector<Vector> load_table(string &file_name, int D)
 {
   std::vector<Vector> sample;
   ifstream file(file_name.c_str());
@@ -210,9 +210,9 @@ int main(int argc, char **argv)
   string kldiv_file = folder + "n_" + size_str + "_kldiv";
   string msglens_file = folder + "n_" + size_str + "_msglens";
 
-  std::vector<Vector> negloglkhd = load_matrix(negloglkhd_file,NUM_METHODS+1);
-  std::vector<Vector> kldiv = load_matrix(kldiv_file,NUM_METHODS);
-  std::vector<Vector> msglens = load_matrix(msglens_file,NUM_METHODS+1);
+  std::vector<Vector> negloglkhd = load_table(negloglkhd_file,NUM_METHODS+1);
+  std::vector<Vector> kldiv = load_table(kldiv_file,NUM_METHODS);
+  std::vector<Vector> msglens = load_table(msglens_file,NUM_METHODS+1);
 
   computeMeasures(parameters.n,parameters.d,negloglkhd,msglens,kldiv);
 

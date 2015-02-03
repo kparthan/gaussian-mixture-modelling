@@ -125,7 +125,7 @@ void Test::all_estimates()
   mvnorm = MultivariateNormal(mu,cov);
   mvnorm.printParameters();
   file_name = "./support/R_codes/mvnorm2d.dat";
-  random_sample = load_matrix(file_name,D);
+  random_sample = load_data_table(file_name,D);
   mvnorm_est = MultivariateNormal(mu,cov);
   mvnorm_est.computeAllEstimators(random_sample,estimates,1);
 
@@ -136,7 +136,7 @@ void Test::all_estimates()
   mvnorm = MultivariateNormal(mu,cov);
   mvnorm.printParameters();
   file_name = "./support/R_codes/mvnorm3d.dat";
-  random_sample = load_matrix(file_name,D);
+  random_sample = load_data_table(file_name,D);
   mvnorm_est = MultivariateNormal(mu,cov);
   mvnorm_est.computeAllEstimators(random_sample,estimates,1);*/
 }

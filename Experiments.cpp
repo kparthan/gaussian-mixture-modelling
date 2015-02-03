@@ -826,7 +826,7 @@ void Experiments::inferExperimentalMixtures(
     data_file = "./support/mixturecode2/exp2c/data/" + delta_str + "/"
                 + "mvnorm_iter_" + iter_str + ".dat";
     cout << "data_file: " << data_file << endl;
-    data = load_matrix(data_file,parameters.D);
+    data = load_data_table(data_file,parameters.D);
 
     Vector data_weights(data.size(),1.0);
     Mixture m(parameters.start_from,data,data_weights);
@@ -918,7 +918,7 @@ void Experiments::infer_components_increasing_sample_size_exp3()
     for (int iter=1; iter<=iterations; iter++) {
       iter_str = boost::lexical_cast<string>(iter);
       data_file = data_folder + "mvnorm_iter_" + iter_str + ".dat";
-      data = load_matrix(data_file,D);
+      data = load_data_table(data_file,D);
       Vector data_weights(data.size(),1.0);
       Mixture m(parameters.start_from,data,data_weights);
       Mixture mixture = m;
@@ -997,7 +997,7 @@ void Experiments::infer_components_increasing_sample_size_exp4()
       iter_str = boost::lexical_cast<string>(iter);
       data_file = data_folder + "mvnorm_iter_" + iter_str + ".dat";
       cout << "data_file: " << data_file << endl;
-      data = load_matrix(data_file,D);
+      data = load_data_table(data_file,D);
       Vector data_weights(data.size(),1.0);
       Mixture m(parameters.start_from,data,data_weights);
       Mixture mixture = m;
@@ -1076,7 +1076,7 @@ void Experiments::infer_components_increasing_sample_size_exp4a()
       iter_str = boost::lexical_cast<string>(iter);
       data_file = data_folder + "mvnorm_iter_" + iter_str + ".dat";
       cout << "data_file: " << data_file << endl;
-      data = load_matrix(data_file,D);
+      data = load_data_table(data_file,D);
       Vector data_weights(data.size(),1.0);
       Mixture m(parameters.start_from,data,data_weights);
       Mixture mixture = m;
@@ -1146,7 +1146,7 @@ void Experiments::infer_components_exp_spiral()
 
     data_file = folder + "data/spiral_iter_" + iter_str + ".dat";
     cout << "data_file: " << data_file << endl;
-    data = load_matrix(data_file,3);
+    data = load_data_table(data_file,3);
 
     parameters.infer_log = folder + "logs/infer_iter_" + iter_str + ".log";
     Vector data_weights(data.size(),1.0);
@@ -1235,7 +1235,7 @@ void Experiments::plotMsglensDifferent()
   data_file = "random_sample.dat";
   K = 4; D = 2;
 
-  data = load_matrix(data_file,D);
+  data = load_data_table(data_file,D);
   inferStableMixtures_MML(data,K,1,15,log_file);
 }
 
