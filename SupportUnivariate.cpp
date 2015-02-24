@@ -3,6 +3,7 @@
 extern long double MIN_N;
 extern int IGNORE_SPLIT;
 extern int TRUE_MIX,COMPARE1,COMPARE2;
+extern int TOTAL_ITERATIONS;
 
 long double computeSigma(Vector &data, Vector &weights, long double &mean)
 {
@@ -347,6 +348,7 @@ MixtureUnivariate inferComponentsUnivariate(MixtureUnivariate &mixture, int N, o
   } // if (improved == parent || iter%2 == 0) loop
 
   finish:
+  cout << "TOTAL_ITERATIONS: " << TOTAL_ITERATIONS << endl;
   return parent;
 }
 

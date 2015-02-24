@@ -1,6 +1,8 @@
 clear;
 clc;
-data = load('../../random_sample.dat')
+%data = load('../../random_sample.dat')
+data = load('../acidity.dat')
+%data = load('../iris.dat')
 y = data'
 %delta = 2.5
 %pp = [0.5];

@@ -2087,6 +2087,7 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
   } // if (improved == parent || iter%2 == 0) loop
 
   finish:
+  cout << "TOTAL_ITERATIONS: " << TOTAL_ITERATIONS << endl;
   return parent;
 }
 
