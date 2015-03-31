@@ -80,6 +80,7 @@ typedef boost::numeric::ublas::zero_matrix<long double> ZeroMatrix;
 #define KILL 1
 #define JOIN 2
 
+#define NUM_SPLIT_STRATEGIES 7
 #define RANDOM_ASSIGNMENT_HARD 0
 #define RANDOM_ASSIGNMENT_SOFT 1
 #define MAX_VARIANCE_DETERMINISTIC 2

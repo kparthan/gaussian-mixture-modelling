@@ -40,165 +40,6 @@ struct Parameters Experiments::setParameters(int N, int D, int split_method)
   return parameters;
 }
 
-// different split strategies
-void Experiments::exp1()
-{
-  int N,split_method;
-
-  N = 500;
-  exp1_generate(N);
-
-  for(int i=0; i<=6; i++) {
-    //split_method = RANDOM_ASSIGNMENT_HARD;
-    //split_method = RANDOM_ASSIGNMENT_SOFT;
-    //split_method = MAX_VARIANCE_DETERMINISTIC;
-    //split_method = MAX_VARIANCE_VARIABLE;
-    //split_method = MIN_VARIANCE_DETERMINISTIC;
-    //split_method = MIN_VARIANCE_VARIABLE;
-    //split_method = KMEANS;
-    //exp1_infer(N,split_method);
-    exp1_infer(N,i);
-  }
-
-  exp1_infer_compare();
-}
-
-// ./experiments/search/exp1/
-// bivariate data, covariance = I
-void Experiments::exp1_generate(int N)
-{
-  int D = 2;
-  int precision = 1;
-  //long double delta = 2.0;
-
-  string exp_folder = "./experiments/search/exp1/";
-  check_and_create_directory(exp_folder);
-  for (long double delta=1.8; delta<=2.65; delta+=0.1) {
-    Vector mu1(D,0);
-    Vector mu2(D,0); mu2[0] = delta;
-    Matrix C1 = IdentityMatrix(D,D);
-    Matrix C2 = IdentityMatrix(D,D);
-
-    MultivariateNormal mvnorm1(mu1,C1);
-    MultivariateNormal mvnorm2(mu2,C2);
-
-    Vector weights(2,0.5);
-    std::vector<MultivariateNormal> components;
-    components.push_back(mvnorm1);
-    components.push_back(mvnorm2);
-    Mixture original(2,components,weights);
-    generateExperimentalMixtures(original,delta,exp_folder,N,precision);
-  }
-}
-
-void Experiments::exp1_infer(int N, int split_method)
-{
-  int D = 2;
-  int precision = 1;
-  //long double delta = 2.0;
-
-  struct Parameters parameters = setParameters(N,D,split_method);
-    
-  string exp_folder = "./experiments/search/exp1/";
-  for (long double delta=1.8; delta<=2.65; delta+=0.1) {
-    Vector mu1(D,0);
-    Vector mu2(D,0); mu2[0] = delta;
-    Matrix C1 = IdentityMatrix(D,D);
-    Matrix C2 = IdentityMatrix(D,D);
-
-    MultivariateNormal mvnorm1(mu1,C1);
-    MultivariateNormal mvnorm2(mu2,C2);
-
-    Vector weights(2,0.5);
-    std::vector<MultivariateNormal> components;
-    components.push_back(mvnorm1);
-    components.push_back(mvnorm2);
-    Mixture original(2,components,weights);
-    inferExperimentalMixtures(original,delta,exp_folder,parameters,precision);
-  }
-}
-
-void Experiments::exp1_infer_compare()
-{
-  int D = 2;
-  int precision = 1;
-  //long double delta = 2.3;
-
-  string exp_folder = "./experiments/search/exp1/";
-  string true_mix,mix1_file,mix2_file,data_file;
-  string delta_str,iter_str,output;
-  struct Parameters parameters;
-  std::pair<Vector,Vector> results;
-  Vector msglens,kldivs;
-
-  for (long double delta=1.8; delta<=2.65; delta+=0.1) {
-    Vector mu1(D,0);
-    Vector mu2(D,0); mu2[0] = delta;
-    Matrix C1 = IdentityMatrix(D,D);
-    Matrix C2 = IdentityMatrix(D,D);
-
-    MultivariateNormal mvnorm1(mu1,C1);
-    MultivariateNormal mvnorm2(mu2,C2);
-
-    Vector weights(2,0.5);
-    std::vector<MultivariateNormal> components;
-    components.push_back(mvnorm1);
-    components.push_back(mvnorm2);
-    Mixture original(2,components,weights);
-
-    std::ostringstream ss;
-    ss << fixed << setprecision(precision);
-    ss << delta;
-    delta_str = "delta_" + ss.str();
-
-    true_mix = "./simulation/mixture_" + delta_str;
-    ofstream mix(true_mix.c_str());
-    for (int i=0; i<2; i++) {
-      mix << fixed << setw(10) << setprecision(5) << weights[i];
-      mix << "\t";
-      components[i].printParameters(mix);
-    }
-    mix.close();
-    
-    output = "./experiments/search/exp1/comparisons/msglens_" + delta_str;
-    ofstream out1(output.c_str());
-    output = "./experiments/search/exp1/comparisons/kldivs_" + delta_str;
-    ofstream out2(output.c_str());
-    for (int iter=1; iter<=iterations; iter++) {
-      iter_str = boost::lexical_cast<string>(iter);
-      //data_file = folder1 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
-      data_file = folder2 + "data/" + delta_str + "/mvnorm_iter_" + iter_str + ".dat";
-      mix1_file = folder1 + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
-      mix2_file = folder2 + "mixtures/" + delta_str + "/mvnorm_iter_" + iter_str;
-      cout << "data: " << data_file << endl;
-      cout << "mix1: " << mix1_file << endl;
-      cout << "mix2: " << mix2_file << endl;
-
-      parameters.comparison = SET;
-      TRUE_MIX = SET; COMPARE1 = UNSET; COMPARE2 = SET;
-      parameters.true_mixture = true_mix;
-      parameters.other1_mixture = mix1_file;
-      parameters.other2_mixture = mix2_file;
-      parameters.read_profiles = SET;
-      parameters.profile_file = data_file;
-      parameters.D = D;
-      results = compareMixtures(parameters);
-      msglens = results.first; //print(cout,msglens,3);
-      for (int i=0; i<msglens.size(); i++) {
-        out1 << fixed << scientific << setprecision(6) << msglens[i] << "\t\t";
-      }
-      out1 << endl;
-      kldivs = results.second; //print(cout,kldivs,3);
-      for (int i=0; i<kldivs.size(); i++) {
-        out2 << fixed << scientific << setprecision(6) << kldivs[i] << "\t\t";
-      }
-      out2 << endl;
-    } // for() iter
-    out1.close();
-    out2.close();
-  }
-}
-
 void Experiments::generateExperimentalMixtures(
   Mixture &original, 
   long double delta,
@@ -303,6 +144,135 @@ void Experiments::inferExperimentalMixtures(
   summary << "Avg: " << avg_number << endl;
   summary << "Variance: " << variance << endl;
   summary.close();
+}
+
+Mixture Experiments::mixture_exp1(long double delta)
+{
+  Vector mu1(D,0);
+  Vector mu2(D,0); mu2[0] = delta;
+  Matrix C1 = IdentityMatrix(D,D);
+  Matrix C2 = IdentityMatrix(D,D);
+
+  MultivariateNormal mvnorm1(mu1,C1);
+  MultivariateNormal mvnorm2(mu2,C2);
+
+  Vector weights(2,0.5);
+  std::vector<MultivariateNormal> components;
+  components.push_back(mvnorm1);
+  components.push_back(mvnorm2);
+  Mixture original(2,components,weights);
+  return original;
+}
+
+// ./experiments/search/exp1/
+// bivariate data, covariance = I
+void Experiments::exp1()
+{
+  int N,split_method;
+
+  N = 500;
+  exp1_generate(N);
+
+  for(int i=0; i<NUM_SPLIT_STRATEGIES; i++) {
+    //split_method = RANDOM_ASSIGNMENT_HARD;
+    //split_method = RANDOM_ASSIGNMENT_SOFT;
+    //split_method = MAX_VARIANCE_DETERMINISTIC;
+    //split_method = MAX_VARIANCE_VARIABLE;
+    //split_method = MIN_VARIANCE_DETERMINISTIC;
+    //split_method = MIN_VARIANCE_VARIABLE;
+    //split_method = KMEANS;
+    //exp1_infer(N,split_method);
+    exp1_infer(N,i);
+  }
+
+  exp1_infer_compare();
+}
+
+void Experiments::exp1_generate(int N)
+{
+  int D = 2;
+  int precision = 1;
+  //long double delta = 2.0;
+
+  string exp_folder = "./experiments/search/exp1/";
+  check_and_create_directory(exp_folder);
+  for (long double delta=1.8; delta<=2.65; delta+=0.1) {
+    Mixture original = mixture_exp1(delta);
+    generateExperimentalMixtures(original,delta,exp_folder,N,precision);
+  }
+}
+
+void Experiments::exp1_infer(int N, int split_method)
+{
+  int D = 2;
+  int precision = 1;
+  //long double delta = 2.0;
+
+  struct Parameters parameters = setParameters(N,D,split_method);
+    
+  string exp_folder = "./experiments/search/exp1/";
+  for (long double delta=1.8; delta<=2.65; delta+=0.1) {
+    Mixture original = mixture_exp1(delta);
+    inferExperimentalMixtures(original,delta,exp_folder,parameters,precision);
+  }
+}
+
+void Experiments::exp1_infer_compare()
+{
+  int D = 2;
+  int precision = 1;
+  int large_sample = 100000;
+  //long double delta = 2.3;
+
+  string exp_folder = "./experiments/search/exp1/";
+  string comparisons_folder = exp_folder + "comparisons/";
+  check_and_create_directory(comparisons_folder);
+
+  struct Parameters parameters;
+
+  std::vector<string> split_folders(NUM_SPLIT_STRATEGIES);
+  for (int j=0; j<NUM_SPLIT_STRATEGIES; j++) {
+    split_folders[j] = "split_" + boost::lexical_cast<string>(j) + "/";
+  }
+
+  for (long double delta=1.8; delta<=2.65; delta+=0.1) {
+    Mixture original = mixture_exp1(delta);
+    std::vector<Vector> large_data = original.generate(large_sample);
+    Mixture mixture;
+
+    std::ostringstream ss;
+    ss << fixed << setprecision(precision);
+    ss << delta;
+    string delta_str = "delta_" + ss.str();
+
+    string output = comparisons_folder + "msglens_" + delta_str;
+    ofstream out1(output.c_str(),ios::app);
+    output = comparisons_folder + "kldivs_" + delta_str;
+    ofstream out2(output.c_str(),ios::app);
+
+    for (int iter=1; iter<=iterations; iter++) {
+      string iter_str = boost::lexical_cast<string>(iter);
+      string data_file = exp_folder + "data/" + delta_str 
+                         + "/mvnorm_iter_" + iter_str + ".dat";
+      cout << "data: " << data_file << endl;
+      std::vector<Vector> data = load_data_table(data_file,D);
+      Vector data_weights(data.size(),1.0);
+      for (int j=0; j<NUM_SPLIT_STRATEGIES; j++) {
+        string mix_file = exp_folder + split_folders[j] + "mixtures/" + delta_str 
+                          + "/mvnorm_iter_" + iter_str;
+        cout << "mix: " << mix_file << endl;
+        mixture.load(mix_file,D,data,data_weights);
+        long double msglen = mixture.computeMinimumMessageLength(0);
+        out1 << fixed << scientific << setprecision(6) << msglen << "\t\t";
+        long double kldiv = original.computeKLDivergence(mixture,large_data);
+        out2 << fixed << scientific << setprecision(6) << kldiv << "\t\t";
+      } // for() j
+      out1 << endl;
+      out2 << endl;
+    } // for() iter
+    out1.close();
+    out2.close();
+  } // for() delta
 }
 
 void Experiments::infer_components_increasing_sample_size_exp3()

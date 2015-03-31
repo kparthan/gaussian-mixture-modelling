@@ -14,17 +14,29 @@ class Experiments
 
     struct Parameters setParameters(int, int, int);
 
-    void infer_components_exp1();
-    void infer_components_exp1_compare();
+    void generateExperimentalMixtures(
+      Mixture &, 
+      long double, 
+      string &, 
+      int, 
+      int
+    );
 
-    void infer_components_exp2();
-    void infer_components_exp2_compare();
+    void inferExperimentalMixtures(
+      Mixture &, 
+      long double, 
+      string &, 
+      struct Parameters &, 
+      int
+    );
 
-    void generateExperimentalMixtures(Mixture &, long double, string &, int, int);
-    void inferExperimentalMixtures(Mixture &, long double, string &, struct Parameters &, int);
+    Mixture mixture_exp1(long double);
+    void exp1();
+    void exp1_generate(int);
+    void exp1_infer(int, int);
+    void exp1_infer_compare();
 
     void infer_components_increasing_sample_size_exp3();
-    void infer_components_increasing_sample_size_exp4();
 };
 
 #endif
