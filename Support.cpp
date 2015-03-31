@@ -22,6 +22,8 @@ int STRATEGY;
 int MSGLEN_FAIL;
 int TRUE_MIX,COMPARE1,COMPARE2;
 int SPLIT_METHOD;
+struct stat st = {0};
+int EXPERIMENTS;
 
 ////////////////////// GENERAL PURPOSE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -99,12 +101,14 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
   }
 
   if (vm.count("experiments")) {
+    EXPERIMENTS = SET;
     parameters.experiments = SET;
     if (!vm.count("iter")) {
       parameters.iterations = 1;
     }
   } else {
     parameters.experiments = UNSET;
+    EXPERIMENTS = UNSET;
   }
 
   if (vm.count("heatmap")) {
@@ -260,6 +264,13 @@ bool checkFile(string &file_name)
 {
   ifstream file(file_name.c_str());
   return file;
+}
+
+void check_and_create_directory(string &directory)
+{
+  if (stat(directory.c_str(), &st) == -1) {
+      mkdir(directory.c_str(), 0700);
+  }
 }
 
 /*!
@@ -731,31 +742,11 @@ void RunExperiments(int iterations)
 {
   Experiments experiments(iterations);
 
-  //experiments.simulate(3);
-  //experiments.simulate(5);
-
   //experiments.infer_components_exp1();
-  //experiments.infer_components_exp1a();
-  //experiments.infer_components_exp2();
-  //experiments.infer_components_exp2a();
-  //experiments.infer_components_exp2b();
-  //experiments.infer_components_exp2c();
 
   //experiments.infer_components_exp1_compare();
-  //experiments.infer_components_exp1a_compare();
-  //experiments.infer_components_exp2_compare();
-  //experiments.infer_components_exp2a_compare();
-  //experiments.infer_components_exp2b_compare();
-  //experiments.infer_components_exp2c_compare();
 
   //experiments.infer_components_increasing_sample_size_exp3();
-  //experiments.infer_components_increasing_sample_size_exp4();
-  //experiments.infer_components_increasing_sample_size_exp4a();
-
-  //experiments.infer_components_exp_spiral();
-  //experiments.infer_components_exp_spiral_compare();
-
-  experiments.plotMsglensDifferent();
 }
 
 void computeResponsibilityGivenMixture(struct Parameters &parameters)

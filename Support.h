@@ -54,6 +54,7 @@ struct TwoPairs
 struct Parameters parseCommandLineInput (int, char **); 
 void Usage (const char *, options_description &);
 bool checkFile(string &);
+void check_and_create_directory(string &);
 void writeToFile(const char *, std::vector<Vector> &, int);
 void writeToFile(const char *, std::vector<Vector> &);
 void writeToFile(string &, std::vector<Vector> &);

@@ -13,6 +13,7 @@ extern int IGNORE_SPLIT;
 extern long double MIN_N;
 extern int MSGLEN_FAIL;
 extern int SPLIT_METHOD;
+extern int EXPERIMENTS;
 
 /*!
  *  \brief Null constructor module
@@ -836,16 +837,16 @@ long double Mixture::computeMinimumMessageLength(int verbose /* default = 1 (pri
   return minimum_msglen;
 }
 
-void Mixture::printIndividualMsgLengths(ostream &log_file)
+void Mixture::printIndividualMsgLengths(ostream &out)
 {
-  log_file << "\t\tIk: " << Ik << endl;
-  log_file << "\t\tIw: " << Iw << endl;
-  log_file << "\t\tIt: " << sum_It << " "; print(log_file,It,3); log_file << endl;
-  log_file << "\t\tlatt: " << kd_term << endl;
-  log_file << "\t\tIl: " << Il << endl;
-  log_file << "\t\tpart1 (Ik+Iw+It+latt): " << part1 << " + " 
-           << "part2 (Il+d/(2*log(2))): " << part2 << " = "
-           << part1 + part2 << " bits." << endl << endl;
+  out << "\t\tIk: " << Ik << endl;
+  out << "\t\tIw: " << Iw << endl;
+  out << "\t\tIt: " << sum_It << " "; print(out,It,3); out << endl;
+  out << "\t\tlatt: " << kd_term << endl;
+  out << "\t\tIl: " << Il << endl;
+  out << "\t\tpart1 (Ik+Iw+It+latt): " << part1 << " + " 
+      << "part2 (Il+d/(2*log(2))): " << part2 << " = "
+      << part1 + part2 << " bits." << endl << endl;
 }
 
 /*!
@@ -854,17 +855,19 @@ void Mixture::printIndividualMsgLengths(ostream &log_file)
 string Mixture::getLogFile()
 {
   string file_name;
-  if (INFER_COMPONENTS == UNSET) {
-    if (MIXTURE_SIMULATION == UNSET) {
-      file_name = "./mixture/logs/";
-    } else if (MIXTURE_SIMULATION == SET) {
-      file_name = "./simulation/logs/";
+  if (EXPERIMENTS == UNSET) {
+    if (INFER_COMPONENTS == UNSET) {
+      if (MIXTURE_SIMULATION == UNSET) {
+        file_name = "./mixture/logs/";
+      } else if (MIXTURE_SIMULATION == SET) {
+        file_name = "./simulation/logs/";
+      }
+    } else if (INFER_COMPONENTS == SET) {
+      file_name = "./infer/logs/";
+      file_name += "m_" + boost::lexical_cast<string>(id) + "_";
     }
-  } else if (INFER_COMPONENTS == SET) {
-    file_name = "./infer/logs/";
-    file_name += "m_" + boost::lexical_cast<string>(id) + "_";
+    file_name += boost::lexical_cast<string>(K) + ".log";
   }
-  file_name += boost::lexical_cast<string>(K) + ".log";
   return file_name;
 }
 
@@ -922,16 +925,16 @@ void Mixture::EM()
 {
   /* prepare log file */
   string log_file = getLogFile();
-  ofstream log(log_file.c_str());
+  ofstream out(log_file.c_str());
 
   long double prev=0,current;
   int iter = 1;
-  printParameters(log,0,minimum_msglen);
+  printParameters(out,0,minimum_msglen);
 
   long double impr_rate = 0.00001;
   /* EM loop */
   while (1) {
-    // Expectation (E-step)
+    /* Expectation (E-step) */
     updateResponsibilityMatrix();
     updateEffectiveSampleSize();
     //if (SPLITTING == 1) {
@@ -939,16 +942,16 @@ void Mixture::EM()
         if (sample_size[i] < MIN_N) {
           current = computeMinimumMessageLength();
           goto stop;
-        }
-      }
+        } // if()
+      } // for()
     //}
-    // Maximization (M-step)
+    /* Maximization (M-step) */
     updateWeights();
     updateComponents();
     current = computeMinimumMessageLength();
     if (fabs(current) >= INFINITY) break;
     msglens.push_back(current);
-    printParameters(log,iter,current);
+    printParameters(out,iter,current);
     if (iter != 1) {
       //assert(current > 0);
       // because EM has to consistently produce lower 
@@ -960,16 +963,16 @@ void Mixture::EM()
       if ((iter > 3 && (prev - current) <= impr_rate * prev) ||
             (iter > 1 && current > prev) || current <= 0 || MSGLEN_FAIL == 1) {
         stop:
-        log << "\nSample size: " << N << endl;
-        log << "encoding rate: " << current/N << " bits/point" << endl;
+        out << "\nSample size: " << N << endl;
+        out << "encoding rate: " << current/N << " bits/point" << endl;
         break;
-      }
-    }
+      } // if()
+    } // if (iter != 1) {
     prev = current;
     iter++;
     TOTAL_ITERATIONS++;
-  }
-  log.close();
+  } // while()
+  out.close();
 }
 
 /*!
