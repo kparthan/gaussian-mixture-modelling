@@ -1,6 +1,7 @@
 ./support/mixturecode2/experiments/
 ./experiments/
 ./visualize/sampled_data/
+./visualize/figs/
 ./data/
 ./experiments/
 ./infer/
