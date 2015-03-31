@@ -27,7 +27,7 @@ void MultivariateNormal::updateConstants()
   if (det_cov <= 0) {
     deal_with_improper_covariances(cov,cov_inv,det_cov);
   }
-  assert(det_cov > 0);
+  //assert(det_cov > 0);
   det_cov = fabs(det_cov);
 
   log_cd = computeLogNormalizationConstant();

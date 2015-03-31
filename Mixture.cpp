@@ -794,7 +794,7 @@ long double Mixture::computeMinimumMessageLength(int verbose /* default = 1 (pri
   //cout << "Il: " << Il << endl;
   //assert(Il > 0);
   if (Il < 0 || boost::math::isnan(Il)) {
-    cout << "isnan(Il)\n"; sleep(5);
+    cout << "isnan(Il)\n"; //sleep(5);
     minimum_msglen = LARGE_NUMBER;
     MSGLEN_FAIL = 1;
     return minimum_msglen;
