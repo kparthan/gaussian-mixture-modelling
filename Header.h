@@ -17,11 +17,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-//#include <liblcb/Matrix.h>
 
 #define BOOST_UBLAS_NDEBUG 1 
-//#define BOOST_UBLAS_TYPE_CHECK_MIN 1e-6
-//#define BOOST_UBLAS_TYPE_CHECK_EPSILON 1e-6
 
 #include <boost/program_options.hpp>
 #include <boost/lexical_cast.hpp>
@@ -57,11 +54,11 @@ typedef boost::numeric::ublas::zero_matrix<long double> ZeroMatrix;
 
 // numeric constants
 #define AOM 0.001
-#define LARGE_NUMBER 1000000000
+#define LARGE_NUMBER 10000000000
 #define PI boost::math::constants::pi<double>()
 #define LOG_PI log(PI)
 #define ZERO std::numeric_limits<long double>::epsilon()
-#define TOLERANCE 1e-6
+#define TOLERANCE 1e-8
 
 #define SET 1 
 #define UNSET 0
@@ -83,13 +80,18 @@ typedef boost::numeric::ublas::zero_matrix<long double> ZeroMatrix;
 #define KILL 1
 #define JOIN 2
 
+#define RANDOM_ASSIGNMENT_HARD 0
+#define RANDOM_ASSIGNMENT_SOFT 1
+#define MAX_VARIANCE_DETERMINISTIC 2
+#define MAX_VARIANCE_VARIABLE 3
+#define MIN_VARIANCE_DETERMINISTIC 4
+#define MIN_VARIANCE_VARIABLE 5
+#define KMEANS 6
+
 #define ACCEPT_DEFINITE 0 // default
 #define ACCEPT_PROBABILISTIC 1
 #define ACCEPT_BEST_ITER 2
 #define ACCEPT_LAST_SPLIT 3
-
-#define MC 1
-#define BOUNDS 2
 
 #endif
 

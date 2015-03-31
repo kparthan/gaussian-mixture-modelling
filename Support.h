@@ -32,7 +32,6 @@ struct Parameters
   long double max_kappa;    // max value of kappa allowed
   int start_from;           // starting value of number of components during inference
   int comparison;           // to compare mixtures
-  int comparison_type;
   string true_mixture;
   string other1_mixture,other2_mixture;
   string random_sample;
@@ -125,7 +124,7 @@ bool invertMatrix(const Matrix &, Matrix &);
 void eigenDecomposition(Matrix, Vector &, Matrix &);
 void jacobiRotateMatrix(Matrix &, Matrix &, int, int);
 Vector generateRandomUnitVector(int);
-long double computeEuclideanDistance(Vector &, Vector &);
+long double computeSquaredEuclideanDistance(Vector &, Vector &);
 long double computeLogMultivariateGamma(int, long double);
 bool verify(Matrix &);
 

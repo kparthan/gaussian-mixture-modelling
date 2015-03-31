@@ -21,6 +21,7 @@ long double MIN_N;
 int STRATEGY;
 int MSGLEN_FAIL;
 int TRUE_MIX,COMPARE1,COMPARE2;
+int SPLIT_METHOD;
 
 ////////////////////// GENERAL PURPOSE FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -37,6 +38,7 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
   string parallelize,estimation_method;
   long double improvement_rate;
   int stop_after,strategy;
+  string split_method;
 
   bool noargs = 1;
 
@@ -74,6 +76,7 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
        ("other1",value<string>(&parameters.other1_mixture),"other1 mixture file")
        ("other2",value<string>(&parameters.other2_mixture),"other1 mixture file")
        ("responsibility","flag to compute responsibility matrix")
+       ("split",value<string>(&split_method),"splitting strategy")
   ;
   variables_map vm;
   store(command_line_parser(argc,argv).options(desc).run(),vm);
@@ -149,6 +152,26 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
     parameters.mixture_model = UNSET;
   }
 
+  if (vm.count("split")) {
+    if (split_method.compare("random_assignment_hard") == 0) {
+      SPLIT_METHOD = RANDOM_ASSIGNMENT_HARD;
+    } else if (split_method.compare("random_assignment_soft") == 0) {
+      SPLIT_METHOD = RANDOM_ASSIGNMENT_SOFT;
+    } else if (split_method.compare("max_variance_deterministic") == 0) {
+      SPLIT_METHOD = MAX_VARIANCE_DETERMINISTIC;
+    } else if (split_method.compare("max_variance_variable") == 0) {
+      SPLIT_METHOD = MAX_VARIANCE_VARIABLE;
+    } else if (split_method.compare("min_variance_deterministic") == 0) {
+      SPLIT_METHOD = MIN_VARIANCE_DETERMINISTIC;
+    } else if (split_method.compare("min_variance_variable") == 0) {
+      SPLIT_METHOD = MIN_VARIANCE_VARIABLE;
+    } else if (split_method.compare("kmeans") == 0) {
+      SPLIT_METHOD = KMEANS;
+    }
+  } else {
+    SPLIT_METHOD = MAX_VARIANCE_DETERMINISTIC;  // default
+  }
+
   if (vm.count("simulate")) {
     parameters.simulation = SET;
     MIXTURE_SIMULATION = SET;
@@ -178,12 +201,6 @@ struct Parameters parseCommandLineInput(int argc, char **argv)
       if (!vm.count("samples")) {
         parameters.sample_size = DEFAULT_SAMPLE_SIZE;
       }
-    }
-    parameters.comparison_type = BOUNDS;  // default
-    if(vm.count("mc")) {
-      parameters.comparison_type = MC;
-    } else if (vm.count("bounds")) {
-      parameters.comparison_type = BOUNDS;
     }
     TRUE_MIX = UNSET; COMPARE1 = UNSET; COMPARE2 = UNSET;
     if (vm.count("true")) {
@@ -400,7 +417,7 @@ long double exponent(long double a, long double x)
 long double uniform_random()
 {
   return (*uniform_generator)();
-  //return rand()/(long double)RAND_MAX;
+  // return rand()/(double)RAND_MAX;
 }
 
 /*!
@@ -1548,7 +1565,7 @@ Vector generateRandomUnitVector(int D)
   return unit_vector;
 }
 
-long double computeEuclideanDistance(Vector &p1, Vector &p2)
+long double computeSquaredEuclideanDistance(Vector &p1, Vector &p2)
 {
   int D = p1.size();
   long double distsq = 0;
@@ -1852,8 +1869,6 @@ std::pair<Vector,Vector> compareMixtures(struct Parameters &parameters)
     other1.load(parameters.other1_mixture,parameters.D);
     kldiv = original.computeKLDivergence(other1,Data);
     cout << "kldiv (data): " << kldiv << endl;
-    kldiv = original.computeKLDivergenceAverageBound(other1);
-    cout << "kldiv (bound): " << kldiv << endl;
 
     if (parameters.read_profiles == UNSET) {
       data = Data; 
@@ -1870,8 +1885,6 @@ std::pair<Vector,Vector> compareMixtures(struct Parameters &parameters)
     other1.load(parameters.other1_mixture,parameters.D,data,dw);
     msg = other1.computeMinimumMessageLength(0);
     cout << "msg (other1): " << msg << endl;
-    msg_approx = other1.computeApproximatedMessageLength();
-    cout << "msg_approx (other1): " << msg_approx << endl;
   }
 
   if (COMPARE2 == SET) {
@@ -1885,27 +1898,11 @@ std::pair<Vector,Vector> compareMixtures(struct Parameters &parameters)
       kldiv = original.computeKLDivergence(other1,Data);
       cout << "kldiv (data): " << kldiv << endl;
       kldivs.push_back(kldiv);
-      kldiv = original.computeKLDivergenceUpperBound(other1); upper = kldiv;
-      cout << "kldiv (upper bound): " << kldiv << endl;
-      kldivs.push_back(kldiv);
-      kldiv = original.computeKLDivergenceLowerBound(other1); lower = kldiv;
-      cout << "kldiv (lower bound): " << kldiv << endl;
-      kldivs.push_back(kldiv);
-      kldiv = 0.5 * (upper+lower);
-      kldivs.push_back(kldiv);
 
       cout << "*** OTHER2 MIX ***\n";
       other2.load(parameters.other2_mixture,parameters.D);
       kldiv = original.computeKLDivergence(other2,Data);
       cout << "kldiv (data): " << kldiv << endl;
-      kldivs.push_back(kldiv);
-      kldiv = original.computeKLDivergenceUpperBound(other2); upper = kldiv;
-      cout << "kldiv (upper bound): " << kldiv << endl;
-      kldivs.push_back(kldiv);
-      kldiv = original.computeKLDivergenceLowerBound(other2); lower = kldiv;
-      cout << "kldiv (lower bound): " << kldiv << endl;
-      kldivs.push_back(kldiv);
-      kldiv = 0.5 * (upper+lower);
       kldivs.push_back(kldiv);
     }
 
@@ -1920,17 +1917,11 @@ std::pair<Vector,Vector> compareMixtures(struct Parameters &parameters)
     msg = other1.computeMinimumMessageLength(0);
     cout << "msg (other1): " << msg << endl;
     msglens.push_back(msg);
-    msg_approx = other1.computeApproximatedMessageLength();
-    cout << "msg_approx (other1): " << msg_approx << endl;
-    msglens.push_back(msg_approx);
     cout << "\n*** OTHER2 MIX ***\n";
     other2.load(parameters.other2_mixture,parameters.D,data,dw);
     msg = other2.computeMinimumMessageLength(0);
     cout << "msg (other2): " << msg << endl;
     msglens.push_back(msg);
-    msg_approx = other2.computeApproximatedMessageLength();
-    cout << "msg_approx (other2): " << msg_approx << endl;
-    msglens.push_back(msg_approx);
   } // if (compare2 == SET)
 
   results.first = msglens;

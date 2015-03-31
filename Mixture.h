@@ -57,8 +57,15 @@ class Mixture
     Mixture(int, std::vector<Vector> &, Vector &);
 
     //! Constructor
-    Mixture(int, std::vector<MultivariateNormal> &, Vector &, Vector &, 
-            std::vector<Vector> &, std::vector<Vector> &, Vector &);
+    Mixture(
+      int, 
+      std::vector<MultivariateNormal> &, 
+      Vector &, 
+      Vector &, 
+      std::vector<Vector> &, 
+      std::vector<Vector> &, 
+      Vector &
+    );
 
     //! Overloading = operator
     Mixture operator=(const Mixture &);
@@ -85,29 +92,25 @@ class Mixture
     Vector getSampleSize();
 
     //! Initialize parameters
-    void initialize();
-    void initialize2();
-    void initialize3();
-    void initialize4();
+    void initialize_random_assignment_hard();
+    void split_initialize_random_assignment_soft();
+    void split_initialize_max_variance_deterministic();
+    void split_initialize_max_variance_variable();
+    void split_initialize_min_variance_deterministic();
+    void split_initialize_min_variance_variable();
+    void split_kmeans();
 
     //! Updates the effective sample size
     void updateEffectiveSampleSize();
-    void updateEffectiveSampleSize(int);
 
     //! Update the component weights
     void updateWeights();
-    void updateWeights(int);
-
-    void updateWeights_ML();
-    void updateWeights_ML(int);
 
     //! Update components
     int updateComponents();
-    void updateComponents(int);
 
     //! Update the responsibility matrix
     int updateResponsibilityMatrix();
-    void updateResponsibilityMatrix(int);
 
     //! Computes the responsibility matrix
     void computeResponsibilityMatrix(std::vector<Vector> &, string &);
@@ -120,8 +123,6 @@ class Mixture
 
     //! Computes the minimum message length
     long double computeMinimumMessageLength(int verbose = 0);
-
-    long double computeApproximatedMessageLength();
 
     void printIndividualMsgLengths(ostream &);
 
@@ -139,8 +140,6 @@ class Mixture
 
     //! EM loop
     void EM();
-
-    void CEM();
 
     //! Prints the model parameters
     void printParameters(ostream &, int, long double);
@@ -185,12 +184,6 @@ class Mixture
     long double computeKLDivergence(Mixture &);
 
     long double computeKLDivergence(Mixture &, std::vector<Vector> &);
-
-    long double computeKLDivergenceUpperBound(Mixture &);
-
-    long double computeKLDivergenceLowerBound(Mixture &);
-
-    long double computeKLDivergenceAverageBound(Mixture &);
 };
 
 #endif
