@@ -90,8 +90,6 @@ typedef boost::numeric::ublas::zero_matrix<long double> ZeroMatrix;
 
 #define ACCEPT_DEFINITE 0 // default
 #define ACCEPT_PROBABILISTIC 1
-#define ACCEPT_BEST_ITER 2
-#define ACCEPT_LAST_SPLIT 3
 
 #endif
 

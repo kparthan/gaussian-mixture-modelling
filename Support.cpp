@@ -1963,51 +1963,6 @@ void strategic_inference(
       log.close();
       break;
     }
-
-    case ACCEPT_BEST_ITER:
-    {
-      int NUM_ATTEMPTS = 3;
-      string log_file;
-      ofstream summary("inference_summary");
-      std::vector<Mixture> stable_mixtures;
-      Mixture stable,starting;
-      long double minimum_msglen,current_msglen;
-      int min_index;
-      for (int i=0; i<NUM_ATTEMPTS; i++) {
-        log_file = parameters.infer_log + "_attempt_" + boost::lexical_cast<string>(i+1);
-        ofstream log(log_file.c_str());
-        if (i == 0) {
-          starting = mixture;
-        } else if (stable.getNumberOfComponents() > starting.getNumberOfComponents()) {
-          starting = stable;
-        }
-        stable = inferComponents(starting,data.size(),data[0].size(),log);
-        if (i == 0) {
-          minimum_msglen = stable.getMinimumMessageLength();
-          min_index = 0;
-        } else {
-          current_msglen = stable.getMinimumMessageLength(); 
-          if (current_msglen < minimum_msglen) {
-            minimum_msglen = current_msglen;
-            min_index = i;
-          }
-        }
-        log.close();
-        NUM_STABLE_COMPONENTS = stable.getNumberOfComponents();
-        stable_mixtures.push_back(stable);
-        summary << "stable mixture [" << i << "] : " << NUM_STABLE_COMPONENTS << endl;
-        stable.printParameters(summary,2);
-      }
-      summary << "\n\nBest mixture: \n";
-      stable_mixtures[min_index].printParameters(summary,2);
-      summary.close();
-      break;
-    }
-
-    case ACCEPT_LAST_SPLIT:
-    {
-      break;
-    }
   } // switch()
 }
 
@@ -2024,7 +1979,8 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
   Mixture modified,improved,parent;
   Vector sample_size;
 
-  MIN_N = 0.25 * D * (D + 3);
+  //MIN_N = 0.25 * D * (D + 3);
+  MIN_N = 5;
 
   improved = mixture;
   TOTAL_ITERATIONS = 0;
@@ -2039,15 +1995,17 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
     components = parent.getComponents();
     sample_size = parent.getSampleSize();
     K = components.size();
-    /*for (int i=0; i<K; i++) { // split() ...
+    for (int i=0; i<K; i++) { // split() ...
       if (sample_size[i] > MIN_N) {
         IGNORE_SPLIT = 0;
         modified = parent.split(i,log);
         if (IGNORE_SPLIT == 0) {
           updateInference(modified,improved,N,log,SPLIT);
+        } else {
+          log << "\t\tIGNORING SPLIT ... \n\n";
         }
       }
-    }*/
+    }
     if (K >= 2) {  // kill() ...
       for (int i=0; i<K; i++) {
         modified = parent.kill(i,log);
@@ -2061,21 +2019,8 @@ Mixture inferComponents(Mixture &mixture, int N, int D, ostream &log)
         updateInference(modified,improved,N,log,JOIN);
       } // join() ing nearest components
     } // if (K > 1) loop
-    if (improved == parent) {
-      for (int i=0; i<K; i++) { // split() ...
-        if (sample_size[i] > MIN_N) {
-          IGNORE_SPLIT = 0;
-          modified = parent.split(i,log);
-          if (IGNORE_SPLIT == 0) {
-            updateInference(modified,improved,N,log,SPLIT);
-          } else {
-            log << "\t\tIGNORING SPLIT ... \n\n";
-          }
-        }
-      } // for()
-    }
     if (improved == parent) goto finish;
-  } // if (improved == parent || iter%2 == 0) loop
+  } // while()
 
   finish:
   cout << "TOTAL_ITERATIONS: " << TOTAL_ITERATIONS << endl;
@@ -2131,20 +2076,11 @@ Mixture inferComponentsProbabilistic(Mixture &mixture, int N, int D, ostream &lo
   Mixture modified,improved,parent;
   Vector sample_size;
 
-  if (D >= 10) {
-    MIN_N = 2 * (D + 3);
-  } else {
-    MIN_N = D + 3;
-  }
+  MIN_N = 5;
 
   improved = mixture;
   TOTAL_ITERATIONS = 0;
 
-  if (D <= 5) {
-    IMPROVEMENT_RATE = 0.001;
-  } else {
-    IMPROVEMENT_RATE = 0.005;
-  }
   while (1) {
     parent = improved;
     iter++;
@@ -2154,6 +2090,17 @@ Mixture inferComponentsProbabilistic(Mixture &mixture, int N, int D, ostream &lo
     components = parent.getComponents();
     sample_size = parent.getSampleSize();
     K = components.size();
+    for (int i=0; i<K; i++) { // split() ...
+      if (sample_size[i] > MIN_N) {
+        IGNORE_SPLIT = 0;
+        modified = parent.split(i,log);
+        if (IGNORE_SPLIT == 0) {
+          updateInference(modified,improved,N,log,SPLIT);
+        } else {
+          log << "\t\tIGNORING SPLIT ... \n\n";
+        }
+      }
+    }
     if (K >= 2) {  // kill() ...
       for (int i=0; i<K; i++) {
         modified = parent.kill(i,log);
@@ -2167,19 +2114,8 @@ Mixture inferComponentsProbabilistic(Mixture &mixture, int N, int D, ostream &lo
         updateInferenceProbabilistic(modified,improved,N,log,JOIN);
       } // join() ing nearest components
     } // if (K > 1) loop
-    if (improved == parent) {
-      for (int i=0; i<K; i++) { // split() ...
-        if (sample_size[i] > MIN_N) {
-          IGNORE_SPLIT = 0;
-          modified = parent.split(i,log);
-          if (IGNORE_SPLIT == 0) {
-            updateInferenceProbabilistic(modified,improved,N,log,SPLIT);
-          }
-        }
-      } // for()
-    }
     if (improved == parent) goto finish;
-  } // if (improved == parent || iter%2 == 0) loop
+  } // while()
 
   finish:
   return parent;
