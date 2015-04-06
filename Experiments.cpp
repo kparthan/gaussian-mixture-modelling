@@ -1,4 +1,4 @@
-include "Experiments.h"
+#include "Experiments.h"
 
 extern int MIXTURE_SIMULATION;
 extern int INFER_COMPONENTS;
@@ -12,7 +12,7 @@ extern int TRUE_MIX,COMPARE1,COMPARE2;
 extern int SPLIT_METHOD;
 extern struct stat st;
 
-Experiments::Experiments(int iterations) : iterations(iterations)
+Experiments::Experiments(void)
 {
   iterations = 50;
 }
@@ -68,7 +68,6 @@ void Experiments::generateExperimentalMixtures(
 }
 
 void Experiments::inferExperimentalMixtures(
-  Mixture &original, 
   long double delta,
   string &exp_folder,
   struct Parameters &parameters,
@@ -81,7 +80,7 @@ void Experiments::inferExperimentalMixtures(
 
   string data_folder = exp_folder + "data/" + delta_str + "/";
 
-  string split_folder = "split_" + boost::lexical_cast<string>(split_method) + "/";
+  string split_folder = "split_" + boost::lexical_cast<string>(SPLIT_METHOD) + "/";
   string results_folder = exp_folder + split_folder;
   check_and_create_directory(results_folder);
 
@@ -103,8 +102,7 @@ void Experiments::inferExperimentalMixtures(
   ofstream summary(summary_log.c_str());
   std::vector<Vector> data;
   int num_success = 0;
-  Vector inferred(iterations,0);
-  long double avg_number,variance;
+
   for (int iter=1; iter<=iterations; iter++) {
     iter_str = boost::lexical_cast<string>(iter);
     parameters.infer_log = logs_folder + "mvnorm_iter_" + iter_str + ".log";
@@ -132,22 +130,18 @@ void Experiments::inferExperimentalMixtures(
     out.close();
 
     // update summary file
-    inferred[iter-1] = stable.getNumberOfComponents();
-    if (stable.getNumberOfComponents() == original.getNumberOfComponents()) num_success++;
+    //inferred[iter-1] = stable.getNumberOfComponents();
+    //if (stable.getNumberOfComponents() == original.getNumberOfComponents()) num_success++;
     summary << "\t\t" << iter << "\t\t" << stable.getNumberOfComponents() << "\t\t" 
             << TOTAL_ITERATIONS << endl;
   }
-  avg_number = computeMean(inferred);
-  variance = computeVariance(inferred);
-  summary << "\nsuccess rate: " //<< setprecision(2) 
-          << num_success * 100 / (long double)(iterations) << " %\n";
-  summary << "Avg: " << avg_number << endl;
-  summary << "Variance: " << variance << endl;
   summary.close();
 }
 
 Mixture Experiments::mixture_exp1(long double delta)
 {
+  int D = 2;
+
   Vector mu1(D,0);
   Vector mu2(D,0); mu2[0] = delta;
   Matrix C1 = IdentityMatrix(D,D);
@@ -171,9 +165,10 @@ void Experiments::exp1()
   int N,split_method;
 
   N = 500;
-  exp1_generate(N);
 
-  for(int i=0; i<NUM_SPLIT_STRATEGIES; i++) {
+  //exp1_generate(N);
+
+  /*for (int i=0; i<NUM_SPLIT_STRATEGIES; i++) {
     //split_method = RANDOM_ASSIGNMENT_HARD;
     //split_method = RANDOM_ASSIGNMENT_SOFT;
     //split_method = MAX_VARIANCE_DETERMINISTIC;
@@ -183,7 +178,7 @@ void Experiments::exp1()
     //split_method = KMEANS;
     //exp1_infer(N,split_method);
     exp1_infer(N,i);
-  }
+  }*/
 
   exp1_infer_compare();
 }
@@ -206,23 +201,22 @@ void Experiments::exp1_infer(int N, int split_method)
 {
   int D = 2;
   int precision = 1;
-  //long double delta = 2.0;
 
   struct Parameters parameters = setParameters(N,D,split_method);
     
   string exp_folder = "./experiments/search/exp1/";
   for (long double delta=1.8; delta<=2.65; delta+=0.1) {
-    Mixture original = mixture_exp1(delta);
-    inferExperimentalMixtures(original,delta,exp_folder,parameters,precision);
+    //Mixture original = mixture_exp1(delta);
+    inferExperimentalMixtures(delta,exp_folder,parameters,precision);
   }
 }
 
 void Experiments::exp1_infer_compare()
 {
+  int true_number = 2;
   int D = 2;
   int precision = 1;
   int large_sample = 100000;
-  //long double delta = 2.3;
 
   string exp_folder = "./experiments/search/exp1/";
   string comparisons_folder = exp_folder + "comparisons/";
@@ -235,21 +229,31 @@ void Experiments::exp1_infer_compare()
     split_folders[j] = "split_" + boost::lexical_cast<string>(j) + "/";
   }
 
+  string output = comparisons_folder + "average_inferred";
+  ofstream avg_inf(output.c_str());
+  output = comparisons_folder + "variance_inferred";
+  ofstream var_inf(output.c_str());
+  output = comparisons_folder + "success_rate";
+  ofstream correct_inf(output.c_str());
+
   for (long double delta=1.8; delta<=2.65; delta+=0.1) {
     Mixture original = mixture_exp1(delta);
-    std::vector<Vector> large_data = original.generate(large_sample);
-    Mixture mixture;
+    std::vector<Vector> large_data = original.generate(large_sample,0);
 
     std::ostringstream ss;
     ss << fixed << setprecision(precision);
     ss << delta;
     string delta_str = "delta_" + ss.str();
 
-    string output = comparisons_folder + "msglens_" + delta_str;
-    ofstream out1(output.c_str(),ios::app);
+    output = comparisons_folder + "msglens_" + delta_str;
+    ofstream out1(output.c_str());
     output = comparisons_folder + "kldivs_" + delta_str;
-    ofstream out2(output.c_str(),ios::app);
+    ofstream out2(output.c_str());
 
+    Vector emptyvec(iterations,0);
+    std::vector<Vector> num_inferred(NUM_SPLIT_STRATEGIES,emptyvec);
+    long double avg_number,variance;
+    Vector correct_selections(NUM_SPLIT_STRATEGIES,0);
     for (int iter=1; iter<=iterations; iter++) {
       string iter_str = boost::lexical_cast<string>(iter);
       string data_file = exp_folder + "data/" + delta_str 
@@ -258,6 +262,7 @@ void Experiments::exp1_infer_compare()
       std::vector<Vector> data = load_data_table(data_file,D);
       Vector data_weights(data.size(),1.0);
       for (int j=0; j<NUM_SPLIT_STRATEGIES; j++) {
+        Mixture mixture;
         string mix_file = exp_folder + split_folders[j] + "mixtures/" + delta_str 
                           + "/mvnorm_iter_" + iter_str;
         cout << "mix: " << mix_file << endl;
@@ -266,91 +271,112 @@ void Experiments::exp1_infer_compare()
         out1 << fixed << scientific << setprecision(6) << msglen << "\t\t";
         long double kldiv = original.computeKLDivergence(mixture,large_data);
         out2 << fixed << scientific << setprecision(6) << kldiv << "\t\t";
+
+        int k = mixture.getNumberOfComponents();
+        num_inferred[j][iter-1] = k;
+        if (k == true_number) correct_selections[j] += 1;
       } // for() j
       out1 << endl;
       out2 << endl;
     } // for() iter
     out1.close();
     out2.close();
+    avg_inf << fixed << setprecision(1) << delta << "\t\t";
+    var_inf << fixed << setprecision(1) << delta << "\t\t";
+    correct_inf << fixed << setprecision(1) << delta << "\t\t";
+    for (int j=0; j<NUM_SPLIT_STRATEGIES; j++) {
+      long double avg_number = computeMean(num_inferred[j]);
+      avg_inf << fixed << setprecision(6) << avg_number << "\t\t";
+      long double variance = computeVariance(num_inferred[j]);
+      var_inf << fixed << setprecision(6) << variance << "\t\t";
+      long double success_rate = correct_selections[j] * 100 / (long double)(iterations);
+      correct_inf << fixed << setprecision(6) << success_rate << "\t\t";
+    } // for() j
+    avg_inf << endl;
+    var_inf << endl;
+    correct_inf << endl;
   } // for() delta
+  avg_inf.close();
+  var_inf.close();
+  correct_inf.close();
 }
 
-void Experiments::infer_components_increasing_sample_size_exp3()
-{
-  iterations = 50;
-  int D = 2;
-  int precision = 1;
-  long double delta = 2.0;
-  Vector mu1(D,0);
-  Vector mu2(D,0); mu2[0] = delta;
-  Matrix C1 = IdentityMatrix(D,D);
-  Matrix C2 = IdentityMatrix(D,D);
-  MultivariateNormal mvnorm1(mu1,C1);
-  MultivariateNormal mvnorm2(mu2,C2);
-  Vector weights(2,0.5);
-  std::vector<MultivariateNormal> components;
-  components.push_back(mvnorm1);
-  components.push_back(mvnorm2);
-  Mixture original(2,components,weights);
-
-  string folder = "./experiments/search/exp3/delta_2.0/";
-  string N_str,iter_str,data_file,data_folder;
-  std::vector<Vector> data;
-  // generate data
-/*
-  for (int N=600; N<=4000; N+=50) {
-  //for (int N=2050; N<=4000; N+=50) {
-    N_str = "N_" + boost::lexical_cast<string>(N);
-    data_folder = folder + N_str + "/";
-    if (stat(data_folder.c_str(), &st) == -1) {
-        mkdir(data_folder.c_str(), 0700);
-    }
-    for (int iter=1; iter<=iterations; iter++) {
-      data = original.generate(N,0);
-      iter_str = boost::lexical_cast<string>(iter);
-      data_file = data_folder + "mvnorm_iter_" + iter_str + ".dat";
-      writeToFile(data_file,data);
-    } // for iter()
-  } // for N()
-*/
-
-  // infer mixture components
-  struct Parameters parameters;
-  string summary_folder = folder + "summary/";
-  string summary_file;
-  long double avg_number,variance;
-  string avg_inference = folder + "avg_inference";
-  ofstream avginfer(avg_inference.c_str(),ios::app);
-  for (int N=600; N<=4000; N+=50) {
-  //for (int N=2050; N<=4000; N+=50) {
-    Vector inferred(iterations,0);
-    N_str = "N_" + boost::lexical_cast<string>(N);
-    data_folder = folder + N_str + "/";
-    summary_file = summary_folder + N_str;
-    ofstream out(summary_file.c_str());
-    parameters = setParameters(N,D);
-    for (int iter=1; iter<=iterations; iter++) {
-      iter_str = boost::lexical_cast<string>(iter);
-      data_file = data_folder + "mvnorm_iter_" + iter_str + ".dat";
-      data = load_data_table(data_file,D);
-      Vector data_weights(data.size(),1.0);
-      Mixture m(parameters.start_from,data,data_weights);
-      Mixture mixture = m;
-      mixture.estimateParameters();
-      parameters.infer_log = "dummy";
-      ofstream log(parameters.infer_log.c_str());
-      Mixture stable = inferComponents(mixture,data.size(),data[0].size(),log);
-      log.close();
-      int ans = stable.getNumberOfComponents();
-      out << ans << endl;
-      inferred[iter-1] = ans;
-    } // for iter()
-    out.close();
-    avg_number = computeMean(inferred);
-    variance = computeVariance(inferred);
-    avginfer << N << "\t\t" << avg_number << "\t\t" << variance << endl; 
-  } // for N()
-  avginfer.close();
-
-}
-
+//void Experiments::infer_components_increasing_sample_size_exp3()
+//{
+//  iterations = 50;
+//  int D = 2;
+//  int precision = 1;
+//  long double delta = 2.0;
+//  Vector mu1(D,0);
+//  Vector mu2(D,0); mu2[0] = delta;
+//  Matrix C1 = IdentityMatrix(D,D);
+//  Matrix C2 = IdentityMatrix(D,D);
+//  MultivariateNormal mvnorm1(mu1,C1);
+//  MultivariateNormal mvnorm2(mu2,C2);
+//  Vector weights(2,0.5);
+//  std::vector<MultivariateNormal> components;
+//  components.push_back(mvnorm1);
+//  components.push_back(mvnorm2);
+//  Mixture original(2,components,weights);
+//
+//  string folder = "./experiments/search/exp3/delta_2.0/";
+//  string N_str,iter_str,data_file,data_folder;
+//  std::vector<Vector> data;
+//  // generate data
+///*
+//  for (int N=600; N<=4000; N+=50) {
+//  //for (int N=2050; N<=4000; N+=50) {
+//    N_str = "N_" + boost::lexical_cast<string>(N);
+//    data_folder = folder + N_str + "/";
+//    if (stat(data_folder.c_str(), &st) == -1) {
+//        mkdir(data_folder.c_str(), 0700);
+//    }
+//    for (int iter=1; iter<=iterations; iter++) {
+//      data = original.generate(N,0);
+//      iter_str = boost::lexical_cast<string>(iter);
+//      data_file = data_folder + "mvnorm_iter_" + iter_str + ".dat";
+//      writeToFile(data_file,data);
+//    } // for iter()
+//  } // for N()
+//*/
+//
+//  // infer mixture components
+//  struct Parameters parameters;
+//  string summary_folder = folder + "summary/";
+//  string summary_file;
+//  long double avg_number,variance;
+//  string avg_inference = folder + "avg_inference";
+//  ofstream avginfer(avg_inference.c_str(),ios::app);
+//  for (int N=600; N<=4000; N+=50) {
+//  //for (int N=2050; N<=4000; N+=50) {
+//    Vector inferred(iterations,0);
+//    N_str = "N_" + boost::lexical_cast<string>(N);
+//    data_folder = folder + N_str + "/";
+//    summary_file = summary_folder + N_str;
+//    ofstream out(summary_file.c_str());
+//    parameters = setParameters(N,D);
+//    for (int iter=1; iter<=iterations; iter++) {
+//      iter_str = boost::lexical_cast<string>(iter);
+//      data_file = data_folder + "mvnorm_iter_" + iter_str + ".dat";
+//      data = load_data_table(data_file,D);
+//      Vector data_weights(data.size(),1.0);
+//      Mixture m(parameters.start_from,data,data_weights);
+//      Mixture mixture = m;
+//      mixture.estimateParameters();
+//      parameters.infer_log = "dummy";
+//      ofstream log(parameters.infer_log.c_str());
+//      Mixture stable = inferComponents(mixture,data.size(),data[0].size(),log);
+//      log.close();
+//      int ans = stable.getNumberOfComponents();
+//      out << ans << endl;
+//      inferred[iter-1] = ans;
+//    } // for iter()
+//    out.close();
+//    avg_number = computeMean(inferred);
+//    variance = computeVariance(inferred);
+//    avginfer << N << "\t\t" << avg_number << "\t\t" << variance << endl; 
+//  } // for N()
+//  avginfer.close();
+//
+//}
+//

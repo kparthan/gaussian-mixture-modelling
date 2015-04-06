@@ -10,7 +10,7 @@ class Experiments
     int iterations;
 
   public:
-    Experiments(int);
+    Experiments();
 
     struct Parameters setParameters(int, int, int);
 
@@ -23,7 +23,6 @@ class Experiments
     );
 
     void inferExperimentalMixtures(
-      Mixture &, 
       long double, 
       string &, 
       struct Parameters &, 

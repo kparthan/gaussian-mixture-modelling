@@ -307,7 +307,7 @@ void writeToFile(string &file_name, std::vector<Vector> &v)
   ofstream file(file_name.c_str());
   for (int i=0; i<v.size(); i++) {
     for (int j=0; j<v[i].size(); j++) {
-      file << setw(15) << scientific << v[i][j];
+      file << fixed << setw(15) << setprecision(6) << scientific << v[i][j];
     }
     file << endl;
   }
@@ -735,12 +735,14 @@ void TestFunctions()
 
   //test.all_estimates();
 
-    test.factor_analysis_spiral_data();
+  //test.factor_analysis_spiral_data();
 }
 
 void RunExperiments(int iterations)
 {
-  Experiments experiments(iterations);
+  Experiments experiments;
+
+  experiments.exp1();
 
   //experiments.infer_components_exp1();
 
